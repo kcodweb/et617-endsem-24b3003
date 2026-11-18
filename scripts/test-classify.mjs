@@ -11,6 +11,18 @@ const cases = [
   ["q1", "have finished", "M1"],
   ["q3", "Did … see", "M3"],
   ["q5", "bought", "correct"],
+  // level 3 (Task 7): multi-blank and multi-sentence items
+  ["q10", "have known … met", "correct"],
+  ["q10", "have known, met", "correct"],
+  ["q10", "know … met", "M2"],
+  ["q10", "have known … have met", "M1"],
+  ["q11", "has gone", "correct"],
+  ["q11", "went", "other"],
+  ["q12", "did reach", "correct"],
+  ["q12", "have … reached", "M1"],
+  ["q13", "Yesterday I went to the market. I have lived in Patna since 2019.", "correct"],
+  ["q13", "Yesterday I went to the market. I am living in Patna since 2019.", "M2"],
+  ["q13", "Yesterday I have gone to the market. I have lived in Patna since 2019.", "M1"],
 ];
 
 let failed = 0;

@@ -15,7 +15,11 @@ Rules:
 - "marker" must be the exact time words that appear in "prompt".
 - fill: prompt contains ___ followed by the base verb in brackets, e.g. "She ___ (eat) lunch at 2 pm."
 - fix: prompt is a sentence containing exactly one tense error; answer is the corrected full sentence.
-- level 1 = short single clause; level 2 = everyday sentence with a clear marker; level 3 = two clauses or mixed markers.`;
+Levels:
+- level 1 = a single clause with an obvious marker (yesterday, since 2020, ever).
+- level 2 = questions, negatives, and "for" vs "since" (e.g. "She hasn't eaten since morning.", "Did you go there last week?").
+- level 3 = harder contrasts: has gone vs has been, When-questions (simple past), or a sentence where only one verb
+  is tested but the context has two clauses. Still exactly ONE blank / ONE error.`;
 
 function valid(q) {
   if (!q || !["mcq", "fill", "fix"].includes(q.format)) return false;

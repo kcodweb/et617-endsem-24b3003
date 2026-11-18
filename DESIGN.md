@@ -67,6 +67,10 @@ one hand.
 | Q5 | Explain | Why is "She has just left" correct? | "just" connects the action to now → present perfect |
 | Q6 | Fill blank | My father ___ (buy) a new phone last month. | bought |
 
+**Levels:** level 1 = a single clause with an obvious marker; level 2 = questions, negatives, *for* vs *since*;
+level 3 = two clauses (*I have known Amit since Class 3, and we met first at a cricket match*), *has gone* vs
+*has been*, When-questions, and a two-error diary fix (seed items q10–q13).
+
 **Feedback:**
 - Correct: "Sahi! *Last month* is finished time, so *bought* is right."
 - M1 detected: "You used *have + V3* with *yesterday*. *Yesterday* is finished — English uses the simple past here: *I saw*."

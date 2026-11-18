@@ -327,7 +327,8 @@ export default function Tutor() {
                     placeholder="Because…" className="w-full rounded-xl border-2 border-indigo-300 p-3 text-lg" />
                 : <input value={input} onChange={(e) => setInput(e.target.value)} autoCapitalize="none" onFocus={keepCheckVisible}
                     enterKeyHint="done" onKeyDown={(e) => e.key === "Enter" && input.trim() && check(input)}
-                    placeholder={q.format === "fill" ? "Type the verb, e.g. went" : "Type the correct sentence"}
+                    placeholder={q.format === "fix" ? "Type the correct sentence"
+                      : (q.prompt.match(/___/g) || []).length > 1 ? "Fill both blanks, e.g. have seen … went" : "Type the verb, e.g. went"}
                     className="w-full min-h-[52px] rounded-xl border-2 border-indigo-300 px-3 text-lg" />}
               <Big id="check-btn" onClick={() => check(input)} disabled={!input.trim()}>Check</Big>
             </>

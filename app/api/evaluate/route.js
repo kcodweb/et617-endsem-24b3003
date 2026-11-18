@@ -1,6 +1,6 @@
 // AI feature 2: evaluate the learner's free-text explanation and diagnose a misconception.
 import { askClaude } from "@/lib/claude";
-import { ruleCheck } from "@/lib/rules";
+import { ruleCheck, explainFeedback } from "@/lib/rules";
 
 export { ruleCheck };
 
@@ -38,12 +38,7 @@ export async function POST(req) {
     if (out.feedback.length > 300) out.feedback = out.feedback.slice(0, 300) + "…";
     return Response.json({ ...out, source: "ai" });
   } catch (e) {
-    const feedback = {
-      correct: `Good reasoning — you noticed the time word. ${modelAnswer}`,
-      M2: `“…ing” is for an action happening at this moment. With since/for/just (connected to now) English uses have/has + V3. ${modelAnswer}`,
-      M1: `“Have/has + V3” cannot go with a finished time like yesterday. ${modelAnswer}`,
-      other: `Look at the time word “${marker}”. ${modelAnswer}`,
-    }[ruleVerdict];
+    const feedback = explainFeedback(ruleVerdict, marker, modelAnswer);
     return Response.json({ verdict: ruleVerdict, feedback, source: "offline", reason: String(e.message || e) });
   }
 }

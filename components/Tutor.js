@@ -2,10 +2,14 @@
 import { useEffect, useState } from "react";
 import { BANK, byId } from "@/lib/bank";
 import { classifyDetail, decide, nextLevel, FEEDBACK } from "@/lib/engine";
+import { ruleCheck, explainFeedback } from "@/lib/rules";
 
 const ROLL = "24B3003";
 const SESSION_LENGTH = 8;
 const STORE = "kya-v1";
+// Demo mode (?demo=1): no AI calls, fixed seed order, separate log so it never mixes with real learner data.
+const DEMO_STORE = "kya-demo-v1";
+const DEMO_ORDER = ["q1", "q2", "q6", "q4", "q3", "q7", "q5", "q9"];
 
 // ---------- small UI pieces ----------
 function Shell({ children, onAbout, step }) {
@@ -88,11 +92,15 @@ export default function Tutor() {
   const [hindi, setHindi] = useState(false);
   const [events, setEvents] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [demo, setDemo] = useState(false);
+  const storeKey = demo ? DEMO_STORE : STORE;
 
-  // Restore saved history and profile (they survive a page reload).
+  // Read demo mode from the URL, then restore saved history and profile (they survive a page reload).
   useEffect(() => {
+    const isDemo = new URLSearchParams(window.location.search).get("demo") === "1";
+    setDemo(isDemo);
     try {
-      const s = JSON.parse(localStorage.getItem(STORE) || "null");
+      const s = JSON.parse(localStorage.getItem(isDemo ? DEMO_STORE : STORE) || "null");
       if (s?.history) setHistory(s.history);
       if (s?.profile?.hindi) setHindi(true);
       if (s?.events) setEvents(s.events);
@@ -101,8 +109,8 @@ export default function Tutor() {
   }, []);
   useEffect(() => {
     if (!loaded) return; // don't overwrite saved data before it is restored
-    try { localStorage.setItem(STORE, JSON.stringify({ history, profile: { hindi }, events })); } catch {}
-  }, [history, hindi, events, loaded]);
+    try { localStorage.setItem(storeKey, JSON.stringify({ history, profile: { hindi }, events })); } catch {}
+  }, [history, hindi, events, loaded, storeKey]);
 
   function toggleHindi() {
     const value = !hindi;
@@ -116,7 +124,12 @@ export default function Tutor() {
   function about() { setPrevScreen(screen); setScreen("about"); }
 
   function start() {
-    setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
+    if (demo) {
+      // Demo: start from a clean demo log every time, so the walkthrough is reproducible.
+      setHistory([]); setEvents([]); setHindi(false);
+    } else {
+      setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
+    }
     setLevel(1);
     setCard(0);
     setScreen("concept");
@@ -127,6 +140,7 @@ export default function Tutor() {
     setInput("");
     setResult(null);
     const n = session.length;
+    if (demo) { setQ(byId(DEMO_ORDER[n] || DEMO_ORDER[DEMO_ORDER.length - 1])); setScreen("practice"); return; }
     if (n === 0) { setQ(byId("q1")); setScreen("practice"); return; }
     if (n === 1) { setQ(byId("q2")); setScreen("practice"); return; }
     if (n % 3 === 2) {
@@ -155,7 +169,10 @@ export default function Tutor() {
   async function check(answer) {
     let verdict, feedback, source = "rule";
     let fq = q; // the item as used for feedback (with the time word of the part the learner got wrong)
-    if (q.format === "explain") {
+    if (q.format === "explain" && demo) {
+      verdict = ruleCheck(answer, q.marker);
+      feedback = explainFeedback(verdict, q.marker, q.answer);
+    } else if (q.format === "explain") {
       setLoading(true);
       try {
         const res = await fetch("/api/evaluate", {
@@ -206,6 +223,8 @@ export default function Tutor() {
       <p className="mb-2">Explanations in Hindi because it is Ravi's home language; the questions are in English, his school medium.</p>
       <p className="mb-2"><b>How it adapts:</b> correct → harder question; first mistake → timeline explanation; the same misconception twice → mini-lesson on time words, then an easier level.</p>
       <p className="mb-2"><b>AI:</b> Claude generates new questions and checks your “explain why” answers. Every AI question is checked by rules before you see it. If the AI is slow or fails, an “Offline question” from the teacher-written bank is shown instead.</p>
+      <p className="mb-2"><b>Demo mode:</b> open the app with <code>?demo=1</code> (et617-24b3003.vercel.app/?demo=1) for a reproducible walkthrough: fixed teacher-written questions in a set order, no AI calls, and a separate log.</p>
+      {demo && <p className="mb-2 text-sm text-slate-500">Demo mode · seed questions</p>}
       <p className="mb-2 text-sm text-slate-600">Answers logged on this phone: {history.length}</p>
       <Actions><Big onClick={() => setScreen(prevScreen === "about" ? "welcome" : prevScreen)}>Back</Big></Actions>
     </Shell>
@@ -257,6 +276,7 @@ export default function Tutor() {
     return (
       <Shell onAbout={about} step={step}>
         <p className="text-sm font-semibold text-indigo-800 uppercase">{label}</p>
+        {demo && <p className="text-xs text-slate-500">Demo mode · seed questions</p>}
         <p className="text-xs text-slate-600 mb-2">{q.source === "ai" ? "AI-generated question" : q.source === "offline" ? "Offline question (AI unavailable)" : "Teacher-written question"}</p>
         <p className="text-2xl font-medium leading-snug">{q.prompt}</p>
         <Actions>

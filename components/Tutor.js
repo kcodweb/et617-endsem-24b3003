@@ -14,14 +14,20 @@ const DEMO_ORDER = ["q1", "q2", "q6", "q4", "q3", "q7", "q5", "q9"];
 // ---------- small UI pieces ----------
 // C3: the whole app (header, main, footer) is one 360px phone-width column. On wider screens it gets a
 // border and shadow on a neutral background, so it looks like a phone on a laptop too.
-function Shell({ children, onAbout, step, prog, screenKey, tab, onTab, settings = {} }) {
+function Shell({ children, onAbout, step, prog, screenKey, tab, onTab, onExit, settings = {} }) {
   return (
     <div className="phone w-full max-w-[360px] mx-auto min-h-dvh flex flex-col bg-amber-50 text-slate-900"
       data-size={settings.textSize || "normal"} data-hand={settings.leftHanded ? "left" : "right"}>
       <header className="bg-white border-b border-amber-200">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-1 min-h-[52px]">
           <span className="font-bold text-lg">Kal ya Abhi?</span>
-          {step && <span className="text-sm text-slate-600">{step}</span>}
+          <span className="flex items-center gap-1">
+            {step && <span className="text-sm text-slate-600">{step}</span>}
+            {/* With the tab bar hidden during a question, this is the way back to Home. */}
+            {!tab && onExit && (
+              <button onClick={onExit} aria-label="Exit practice" className="min-h-[48px] min-w-[48px] px-2 rounded-lg text-slate-700 font-semibold active:bg-slate-100">✕ Exit</button>
+            )}
+          </span>
         </div>
         {prog && <Progress {...prog} />}
       </header>
@@ -276,6 +282,9 @@ export default function Tutor() {
   const [screen, setScreen] = useState("home");
   const [card, setCard] = useState(0); // concept card index
   const [conceptFrom, setConceptFrom] = useState("practice"); // idea cards opened from the Learn tab or before practice
+  const [mode, setMode] = useState("normal"); // "normal" practice or "mistakes" practice
+  const [sessionLen, setSessionLen] = useState(SESSION_LENGTH);
+  const [mistakeRules, setMistakeRules] = useState([]);
   const [level, setLevel] = useState(1);
   const [q, setQ] = useState(null);
   const [input, setInput] = useState("");
@@ -336,6 +345,7 @@ export default function Tutor() {
   const firstTime = history.length === 0;
   function start() {
     setProfile((p) => ({ ...p, sessions: (p.sessions || 0) + 1 }));
+    setMode("normal"); setSessionLen(SESSION_LENGTH);
     if (demo) {
       // Demo: start from a clean demo log every time, so the walkthrough is reproducible.
       setHistory([]); setEvents([]); setHindi(false);
@@ -349,6 +359,22 @@ export default function Tutor() {
     loadQuestion(lvl, null, { fresh: true });
   }
 
+  // "Practise my mistakes": a short session (up to 5 items) on the rules (past / perfect) the learner got wrong,
+  // most frequent first. Same classify/decide rules as normal practice.
+  const mistakes = history.filter((h) => h.verdict !== "correct");
+  function startMistakes() {
+    const count = {};
+    mistakes.forEach((h) => { count[h.rule] = (count[h.rule] || 0) + 1; });
+    const rules = Object.keys(count).sort((a, b) => count[b] - count[a]);
+    if (!rules.length) return;
+    setProfile((p) => ({ ...p, sessions: (p.sessions || 0) + 1 }));
+    setMode("mistakes"); setMistakeRules(rules); setSessionLen(Math.min(5, Math.max(3, mistakes.length)));
+    setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
+    const lvl = profile.level || 1;
+    setLevel(lvl);
+    loadQuestion(lvl, null, { fresh: true, mode: "mistakes", rules });
+  }
+
   // Get the next question: seed items first, explain items on every 3rd turn, otherwise ask the AI.
   // opts.fresh: a new session was just started in this same click (the history update is not visible yet).
   async function loadQuestion(lvl, lastVerdict, opts = {}) {
@@ -357,6 +383,32 @@ export default function Tutor() {
     const n = opts.fresh ? 0 : session.length;
     const used = opts.fresh ? [] : session.map((h) => h.qid);
     const everUsed = history.map((h) => h.qid);
+    const m = opts.mode || mode;
+    if (m === "mistakes") {
+      // Rule for this item, cycling through the learner's mistake rules.
+      const rules = opts.rules || mistakeRules;
+      const rule = rules[n % rules.length];
+      const wrongIds = mistakes.filter((h) => h.rule === rule).map((h) => h.qid);
+      const seeds = BANK.filter((b) => b.rule === rule && b.format !== "explain" && !used.includes(b.id));
+      // Seed items with this rule first (ones the learner got wrong before come first), then AI items.
+      const seed = seeds.find((b) => wrongIds.includes(b.id)) || seeds[0];
+      if (seed) { setQ(seed); setScreen("practice"); return; }
+      if (demo) { setScreen("summary"); return; } // demo mode never calls the AI
+      const lastMis = mistakes.filter((h) => h.rule === rule).pop()?.verdict;
+      setLoading(true); setScreen("practice");
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ level: lvl, rule, lastMisconception: ["M1", "M2", "M3"].includes(lastMis) ? lastMis : null,
+            usedIds: used, recent: session.map((h) => h.prompt) }),
+        });
+        setQ(await res.json());
+      } catch {
+        setQ(BANK.find((b) => b.rule === rule) || BANK[0]);
+      }
+      setLoading(false);
+      return;
+    }
     if (demo) { setQ(byId(DEMO_ORDER[n] || DEMO_ORDER[DEMO_ORDER.length - 1])); setScreen("practice"); return; }
     // The first-ever session opens with the two diagnostic seed items (one per misconception).
     if (n === 0 && !everUsed.includes("q1")) { setQ(byId("q1")); setScreen("practice"); return; }
@@ -420,7 +472,7 @@ export default function Tutor() {
       feedback = FEEDBACK[verdict].en(fq);
     }
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
-      response: answer, verdict, lang: hindi ? "hi" : "en", hintUsed, timeTakenMs, t: Date.now() };
+      response: answer, answer: q.answer, marker: q.marker, parts: q.parts, verdict, lang: hindi ? "hi" : "en", hintUsed, timeTakenMs, t: Date.now() };
     const newSession = [...session, entry];
     // Demo mode ignores response time (only the hint counts), so a walkthrough is reproducible while presenting.
     // The real time is still logged in the entry.
@@ -435,17 +487,17 @@ export default function Tutor() {
     const newLevel = nextLevel(level, result.action);
     setLevel(newLevel);
     setProfile((p) => ({ ...p, level: newLevel })); // saved, so "Continue practice" resumes here
-    if (session.length >= SESSION_LENGTH) { setScreen("summary"); return; }
+    if (session.length >= sessionLen) { setScreen("summary"); return; }
     if (result.action === "alternative") { setScreen("alternative"); return; }
     if (result.action === "prerequisite") { setSorted({}); setScreen("prerequisite"); return; }
     loadQuestion(newLevel, result.verdict);
   }
 
   const last = session[session.length - 1];
-  const step = ["practice", "feedback"].includes(screen) ? `Q ${Math.min(session.length + (screen === "practice" ? 1 : 0), SESSION_LENGTH)}/${SESSION_LENGTH}` : "";
+  const step = ["practice", "feedback"].includes(screen) ? `Q ${Math.min(session.length + (screen === "practice" ? 1 : 0), sessionLen)}/${sessionLen}` : "";
   // Progress bar + level badge on every screen inside the practice loop.
   const prog = ["practice", "feedback", "alternative", "prerequisite"].includes(screen)
-    ? { verdicts: session.map((h) => h.verdict), total: SESSION_LENGTH, level }
+    ? { verdicts: session.map((h) => h.verdict), total: sessionLen, level }
     : null;
   const screenKey = screen === "practice" ? `practice-${q?.id}` : screen;
 
@@ -464,7 +516,7 @@ export default function Tutor() {
 
   // ---------- screens ----------
   if (screen === "about") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}>
       <h1 className="text-2xl font-bold mb-2">About</h1>
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
       <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
@@ -495,7 +547,7 @@ export default function Tutor() {
       ["📒", `Practise my mistakes (${mistakes})`, mistakes ? "Your notebook of mix-ups" : "No mistakes yet", () => setScreen("mistakes")],
     ];
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={demo ? "Demo mode" : ""}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={demo ? "Demo mode" : ""}>
         <h1 className="text-3xl font-bold">Namaste Ravi!</h1>
         <p className="text-lg mt-1">Kal ya abhi? Let’s practise <b>“I went”</b> vs <b>“I have gone”</b>.</p>
         <Big onClick={start}>▶ {startLabel}</Big>
@@ -522,14 +574,14 @@ export default function Tutor() {
   }
 
   if (screen === "game") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}>
       <h2 className="text-2xl font-bold">Time-word game</h2>
       <p className="mt-2">Coming in the next step.</p>
     </Shell>
   );
 
   if (screen === "learn") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Learn">
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Learn">
       <h2 className="text-2xl font-bold">Learn</h2>
       <MiniTimelines />
       <div className="mt-4 space-y-2">
@@ -550,7 +602,7 @@ export default function Tutor() {
     const c = LEARN_CARDS[card];
     const fromLearn = conceptFrom === "learn";
     return (
-      <Shell prog={prog} screenKey={`concept-${card}`} tab={tab} onTab={goTab} onAbout={about}
+      <Shell prog={prog} screenKey={`concept-${card}`} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}
         step={fromLearn ? `Learn ${card + 1}/${LEARN_CARDS.length}` : `Idea ${card + 1}/2`}>
         <h2 className="text-2xl font-bold">{c.title}</h2>
         {c.rule ? <Timeline rule={c.rule} /> : <MiniTimelines />}
@@ -572,12 +624,12 @@ export default function Tutor() {
 
   if (screen === "practice") {
     if (loading || !q) return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
     );
     const label = { mcq: "Choose the correct option", fill: "Fill in the blank", fix: "Find and fix the mistake", explain: "Explain in your own words" }[q.format];
     const source = demo ? "Demo mode · seed questions" : q.source === "ai" ? "AI-generated" : q.source === "offline" ? "Offline (AI unavailable)" : "Teacher-written";
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}>
         {/* The question card is vertically centred in the space above the answers. */}
         <div className="flex-1 flex flex-col justify-center">
         <div className="q-card rounded-2xl bg-white border border-slate-200 shadow-[0_4px_20px_rgba(15,23,42,0.08)] p-4">
@@ -628,7 +680,7 @@ export default function Tutor() {
     const explain = fq.format === "explain";
     const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}>
         {/* 1. Status line */}
         <div className={`rounded-xl px-4 py-3 ${good ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
           <p className="text-2xl font-bold">{good ? "✓ Sahi!" : mixup ? "↺ Common mix-up" : "↺ Not quite"}</p>
@@ -662,7 +714,7 @@ export default function Tutor() {
               <span className={`block w-5 h-5 rounded-full bg-white transition ${hindi ? "translate-x-5" : ""}`} />
             </span>
           </button>
-          <Big onClick={next}>{session.length >= SESSION_LENGTH ? "See my progress" : nextText}</Big>
+          <Big onClick={next}>{session.length >= sessionLen ? "See my progress" : nextText}</Big>
         </Actions>
       </Shell>
     );
@@ -672,7 +724,7 @@ export default function Tutor() {
     const fq = result?.fq || q; // the item just answered, with the time word of the part that was wrong
     const rule = fq?.rule || last?.rule || "past";
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Another way to see it">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Another way to see it">
         <h2 className="text-2xl font-bold">{rule === "past" ? "Is the time finished?" : "Does it reach NOW?"}</h2>
         <Timeline rule={rule} />
         <p className="text-lg">
@@ -699,7 +751,7 @@ export default function Tutor() {
     const done = words.every(([w]) => sorted[w]);
     const allRight = words.every(([w, r]) => sorted[w] === r);
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Mini-lesson: time words">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Mini-lesson: time words">
         <h2 className="text-xl font-bold">You made the same mix-up twice. Let’s fix the root: time words.</h2>
         <p className="mt-1 text-base">Tap where each word belongs.</p>
         <div className="mt-3 space-y-2">
@@ -725,11 +777,28 @@ export default function Tutor() {
   }
 
   if (screen === "mistakes") {
-    const wrong = history.filter((h) => h.verdict !== "correct");
+    const TAG = { M1: "“have + V3” with finished time", M2: "“am …ing” with since/for", M3: "“did” with ever/just", other: "Not quite" };
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Mistakes">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Mistakes">
         <h2 className="text-2xl font-bold">My mistake notebook</h2>
-        <p className="mt-2">{wrong.length ? `${wrong.length} answers to look at again.` : "No mistakes yet — great!"}</p>
+        {!mistakes.length && <p className="mt-3 rounded-xl bg-green-100 text-green-900 p-3 font-semibold">No mistakes yet — great!</p>}
+        <div className="mt-3 space-y-2">
+          {[...mistakes].reverse().map((h, i) => {
+            const item = { ...(byId(h.qid) || {}), ...h, prompt: h.prompt, rule: h.rule };
+            const correct = h.answer || byId(h.qid)?.answer || "—";
+            return (
+              <div key={i} className="rounded-xl bg-white border border-slate-200 p-3">
+                <span className="inline-block rounded-full bg-orange-100 text-orange-950 text-sm font-semibold px-2 py-0.5">{TAG[h.verdict] || TAG.other}</span>
+                <p className="mt-1 text-lg leading-snug"><Sentence text={h.prompt} markers={item.marker ? markersOf(item) : []} /></p>
+                <p className="text-base">Your answer: <s className="text-red-700 font-semibold decoration-2">{h.response}</s></p>
+                <p className="text-base">Correct: <span className="text-green-800 font-semibold">{correct}</span></p>
+              </div>
+            );
+          })}
+        </div>
+        {mistakes.length > 0 && (
+          <Actions><Big onClick={startMistakes}>✏️ Practise my mistakes</Big></Actions>
+        )}
       </Shell>
     );
   }
@@ -744,8 +813,8 @@ export default function Tutor() {
       return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
     };
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Your progress">
-        <h2 className="text-2xl font-bold text-center">Well done, you finished!</h2>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Your progress">
+        <h2 className="text-2xl font-bold text-center">{mode === "mistakes" ? "Mistakes practice done!" : "Well done, you finished!"}</h2>
         <ScoreCircle correct={correct} total={session.length} />
         <p className="text-center text-base text-slate-700">reached level {level}</p>
         {[["Finished time → simple past", pct("past"), "bg-amber-500"], ["Connected to now → present perfect", pct("perfect"), "bg-indigo-700"]].map(([t, p, c]) => (

@@ -244,7 +244,7 @@ function Option({ letter, children, onClick }) {
 
 // ---------- the tutor ----------
 export default function Tutor() {
-  const [screen, setScreen] = useState("welcome");
+  const [screen, setScreen] = useState("home");
   const [card, setCard] = useState(0); // concept card index
   const [level, setLevel] = useState(1);
   const [q, setQ] = useState(null);
@@ -252,7 +252,7 @@ export default function Tutor() {
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState(null); // {verdict, feedback, action, source}
   const [loading, setLoading] = useState(false);
-  const [prevScreen, setPrevScreen] = useState("welcome");
+  const [prevScreen, setPrevScreen] = useState("home");
   const [sorted, setSorted] = useState({}); // prerequisite mini-lesson answers
   // Interaction data for adaptivity: was the hint used, and when was the question shown?
   const [hintUsed, setHintUsed] = useState(false);
@@ -265,6 +265,8 @@ export default function Tutor() {
 
   // Learner profile: language preference (home language Hindi vs school medium English) + a log of changes.
   const [hindi, setHindi] = useState(false);
+  // The rest of the learner profile: saved level (to resume), sessions played, settings, best game score.
+  const [profile, setProfile] = useState({ level: 1, sessions: 0 });
   const [events, setEvents] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [demo, setDemo] = useState(false);
@@ -278,14 +280,15 @@ export default function Tutor() {
       const s = JSON.parse(localStorage.getItem(isDemo ? DEMO_STORE : STORE) || "null");
       if (s?.history) setHistory(s.history);
       if (s?.profile?.hindi) setHindi(true);
+      if (s?.profile) { const { hindi: _h, ...rest } = s.profile; setProfile((p) => ({ ...p, ...rest })); }
       if (s?.events) setEvents(s.events);
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
     if (!loaded) return; // don't overwrite saved data before it is restored
-    try { localStorage.setItem(storeKey, JSON.stringify({ history, profile: { hindi }, events })); } catch {}
-  }, [history, hindi, events, loaded, storeKey]);
+    try { localStorage.setItem(storeKey, JSON.stringify({ history, profile: { ...profile, hindi }, events })); } catch {}
+  }, [history, hindi, profile, events, loaded, storeKey]);
 
   function toggleHindi() {
     const value = !hindi;
@@ -298,26 +301,36 @@ export default function Tutor() {
 
   function about() { setPrevScreen(screen); setScreen("about"); }
 
+  // Start a practice session. Demo and first-ever session: level 1, the two idea cards first.
+  // Returning learner: resume at the saved level and go straight to a question.
+  const firstTime = history.length === 0;
   function start() {
+    setProfile((p) => ({ ...p, sessions: (p.sessions || 0) + 1 }));
     if (demo) {
       // Demo: start from a clean demo log every time, so the walkthrough is reproducible.
       setHistory([]); setEvents([]); setHindi(false);
-    } else {
-      setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
+      setLevel(1); setCard(0); setScreen("concept");
+      return;
     }
-    setLevel(1);
-    setCard(0);
-    setScreen("concept");
+    setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
+    if (firstTime) { setLevel(1); setCard(0); setScreen("concept"); return; }
+    const lvl = profile.level || 1;
+    setLevel(lvl);
+    loadQuestion(lvl, null, { fresh: true });
   }
 
   // Get the next question: seed items first, explain items on every 3rd turn, otherwise ask the AI.
-  async function loadQuestion(lvl, lastVerdict) {
+  // opts.fresh: a new session was just started in this same click (the history update is not visible yet).
+  async function loadQuestion(lvl, lastVerdict, opts = {}) {
     setInput("");
     setResult(null);
-    const n = session.length;
+    const n = opts.fresh ? 0 : session.length;
+    const used = opts.fresh ? [] : session.map((h) => h.qid);
+    const everUsed = history.map((h) => h.qid);
     if (demo) { setQ(byId(DEMO_ORDER[n] || DEMO_ORDER[DEMO_ORDER.length - 1])); setScreen("practice"); return; }
-    if (n === 0) { setQ(byId("q1")); setScreen("practice"); return; }
-    if (n === 1) { setQ(byId("q2")); setScreen("practice"); return; }
+    // The first-ever session opens with the two diagnostic seed items (one per misconception).
+    if (n === 0 && !everUsed.includes("q1")) { setQ(byId("q1")); setScreen("practice"); return; }
+    if (n === 1 && used[0] === "q1" && !everUsed.includes("q2")) { setQ(byId("q2")); setScreen("practice"); return; }
     if (n % 3 === 2) {
       const ex = BANK.find((b) => b.format === "explain" && !used.includes(b.id));
       if (ex) { setQ(ex); setScreen("practice"); return; }
@@ -391,6 +404,7 @@ export default function Tutor() {
   function next() {
     const newLevel = nextLevel(level, result.action);
     setLevel(newLevel);
+    setProfile((p) => ({ ...p, level: newLevel })); // saved, so "Continue practice" resumes here
     if (session.length >= SESSION_LENGTH) { setScreen("summary"); return; }
     if (result.action === "alternative") { setScreen("alternative"); return; }
     if (result.action === "prerequisite") { setSorted({}); setScreen("prerequisite"); return; }
@@ -411,7 +425,7 @@ export default function Tutor() {
     mistakes: "mistakes", me: "me", about: "me" };
   const tab = TAB_OF[screen] || null;
   function goTab(t) {
-    if (t === "home") setScreen("welcome");
+    if (t === "home") setScreen("home");
     else if (t === "learn") { setCard(0); setScreen("concept"); }
     else if (t === "practice") start();
     else if (t === "mistakes") setScreen("mistakes");
@@ -436,25 +450,51 @@ export default function Tutor() {
       <p className="mb-2"><b>Demo mode:</b> open the app with <code>?demo=1</code> (et617-24b3003.vercel.app/?demo=1) for a reproducible walkthrough: fixed teacher-written questions in a set order, no AI calls, and a separate log.</p>
       {demo && <p className="mb-2 text-sm text-slate-500">Demo mode · seed questions</p>}
       <p className="mb-2 text-sm text-slate-600">Answers logged on this phone: {history.length}</p>
-      <Actions><Big onClick={() => setScreen(prevScreen === "about" ? "welcome" : prevScreen)}>Back</Big></Actions>
+      <Actions><Big onClick={() => setScreen(prevScreen === "about" ? "home" : prevScreen)}>Back</Big></Actions>
     </Shell>
   );
 
-  if (screen === "welcome") return (
+  if (screen === "home") {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todays = history.filter((h) => h.t >= today.getTime());
+    const mistakes = history.filter((h) => h.verdict !== "correct").length;
+    const startLabel = demo ? "Start practice (demo)" : firstTime ? "Start practice" : `Continue practice · Level ${profile.level || 1}`;
+    const cards = [
+      ["📘", "Learn the 2 ideas", "Finished time vs connected to now", () => setScreen("learn")],
+      ["🎯", "Time-word game", profile.bestGame != null ? `Best score: ${profile.bestGame}/10` : "Sort 10 time words", () => setScreen("game")],
+      ["📒", `Practise my mistakes (${mistakes})`, mistakes ? "Your notebook of mix-ups" : "No mistakes yet", () => setScreen("mistakes")],
+    ];
+    return (
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={demo ? "Demo mode" : ""}>
+        <h1 className="text-3xl font-bold">Namaste Ravi!</h1>
+        <p className="text-lg mt-1">Kal ya abhi? Let’s practise <b>“I went”</b> vs <b>“I have gone”</b>.</p>
+        <Big onClick={start}>▶ {startLabel}</Big>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          {[["Done today", todays.length], ["Correct", todays.filter((h) => h.verdict === "correct").length], ["Level", profile.level || 1]].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-white border border-slate-200 py-2">
+              <p className="text-2xl font-bold">{v}</p>
+              <p className="text-sm text-slate-600">{k}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          {cards.map(([icon, title, sub, go]) => (
+            <button key={title} onClick={go}
+              className="w-full min-h-[64px] rounded-xl bg-white border border-slate-200 px-3 flex items-center gap-3 text-left active:bg-indigo-50">
+              <span className="text-2xl" aria-hidden="true">{icon}</span>
+              <span className="flex-1"><b className="block">{title}</b><span className="text-sm text-slate-600">{sub}</span></span>
+              <span className="text-slate-400" aria-hidden="true">›</span>
+            </button>
+          ))}
+        </div>
+      </Shell>
+    );
+  }
+
+  if (screen === "game" || screen === "learn") return (
     <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
-      <h1 className="text-3xl font-bold mt-2">Kal ya Abhi?</h1>
-      <p className="text-lg mt-1">Yesterday or now? Learn when to say <b>“I went”</b> and when to say <b>“I have gone”</b>.</p>
-      <MiniTimelines />
-      <ul className="mt-4 space-y-2">
-        {[["⏱", `About 15 minutes · ${SESSION_LENGTH} questions`], ["👍", "One thumb — all buttons are at the bottom"],
-          ["🧭", "The questions change based on your answers"]].map(([icon, text]) => (
-          <li key={icon} className="flex items-center gap-3">
-            <span className="shrink-0 w-9 h-9 rounded-full bg-white border border-amber-200 grid place-items-center" aria-hidden="true">{icon}</span>
-            <span>{text}</span>
-          </li>
-        ))}
-      </ul>
-      <Actions><Big onClick={start}>Start</Big></Actions>
+      <h2 className="text-2xl font-bold">{screen === "game" ? "Time-word game" : "Learn"}</h2>
+      <p className="mt-2">Coming in the next step.</p>
     </Shell>
   );
 

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BANK, byId } from "@/lib/bank";
-import { classifyDetail, decide, nextLevel, targetVerb, FEEDBACK, HINT } from "@/lib/engine";
+import { classifyDetail, decide, nextLevel, targetVerb, FEEDBACK, HINT, UI_TEXT, LESSON_BUTTONS } from "@/lib/engine";
 import { ruleCheck, explainFeedback } from "@/lib/rules";
 
 const ROLL = "24B3003";
@@ -86,16 +86,26 @@ function Actions({ children }) {
 }
 
 // One grey line on the feedback screen that explains why the tutor chose the next step (makes the rule visible).
-function decisionLine({ action, hintUsed, timeTakenMs, verdict }, demo) {
-  const secs = Math.round(timeTakenMs / 1000);
-  const time = demo ? `You took ${secs} s (time not used in demo mode)` : `You took ${secs} s`;
-  if (action === "harder") return `${time} · no hint → harder question`;
-  if (action === "same")
-    return hintUsed ? "Hint used → one more at this level" : `${time} (over 45 s) → one more at this level`;
-  if (action === "prerequisite") return "Same mix-up twice → mini-lesson on time words, then one level easier";
-  return ["M1", "M2", "M3"].includes(verdict)
-    ? "First time with this mix-up → see it on a timeline, then a similar question"
-    : "Mistake → see it on a timeline, then a similar question";
+function decisionLine({ action, hintUsed, timeTakenMs, verdict }, demo, lang = "en") {
+  const D = UI_TEXT[lang].decision;
+  const time = D.tookSecs(Math.round(timeTakenMs / 1000), demo);
+  if (action === "harder") return D.harder(time);
+  if (action === "same") return hintUsed ? D.sameHint : D.sameSlow(time);
+  if (action === "prerequisite") return D.prerequisite;
+  return ["M1", "M2", "M3"].includes(verdict) ? D.firstMixup : D.other;
+}
+
+// The "🗣 Hindi mein samjhao" switch (feedback, timeline and mini-lesson screens): 52px, in the thumb zone.
+function HindiSwitch({ on, onClick }) {
+  return (
+    <button role="switch" aria-checked={on} onClick={onClick}
+      className="hand-row w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white active:bg-amber-100 px-4 flex items-center justify-between text-base font-semibold">
+      <span>🗣 Hindi mein samjhao</span>
+      <span className={`w-12 h-7 rounded-full p-1 transition ${on ? "bg-green-600" : "bg-slate-300"}`}>
+        <span className={`block w-5 h-5 rounded-full bg-white transition ${on ? "translate-x-5" : ""}`} />
+      </span>
+    </button>
+  );
 }
 
 // When the keyboard opens, scroll so the Check button (just below the input) is in view.
@@ -767,7 +777,7 @@ export default function Tutor() {
   if (screen === "feedback") {
     const good = result.verdict === "correct";
     const nextText = { harder: "Next: a harder question ⬆", same: "Next: one more at this level", alternative: "Next: see it on a timeline", prerequisite: "Next: a short lesson on time words" }[result.action];
-    const mixup = { M1: "“have + V3” with a finished time", M2: "“am …ing” with since/for", M3: "“did” with ever/already/just" }[result.verdict];
+    const mixup = UI_TEXT[hindi ? "hi" : "en"].mixup[result.verdict];
     const fq = result.fq;
     const explain = fq.format === "explain";
     const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
@@ -797,15 +807,9 @@ export default function Tutor() {
         <p className="mt-1 text-sm text-slate-600">
           {hindi ? "Hindi explanation (teacher-written)" : result.source === "ai" ? "Feedback by AI tutor" : result.source === "offline" ? "Offline feedback (AI unavailable)" : ""}
         </p>
-        <p className="mt-1 text-sm text-slate-600">{decisionLine(result, demo)}</p>
+        <p className="mt-1 text-sm text-slate-600">{decisionLine(result, demo, hindi ? "hi" : "en")}</p>
         <Actions>
-          <button role="switch" aria-checked={hindi} onClick={toggleHindi}
-            className="hand-row w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white active:bg-amber-100 px-4 flex items-center justify-between text-base font-semibold">
-            <span>🗣 Hindi mein samjhao</span>
-            <span className={`w-12 h-7 rounded-full p-1 transition ${hindi ? "bg-green-600" : "bg-slate-300"}`}>
-              <span className={`block w-5 h-5 rounded-full bg-white transition ${hindi ? "translate-x-5" : ""}`} />
-            </span>
-          </button>
+          <HindiSwitch on={hindi} onClick={toggleHindi} />
           <Big onClick={next}>{session.length >= sessionLen ? "See my progress" : nextText}</Big>
         </Actions>
       </Shell>
@@ -815,22 +819,22 @@ export default function Tutor() {
   if (screen === "alternative") {
     const fq = result?.fq || q; // the item just answered, with the time word of the part that was wrong
     const rule = fq?.rule || last?.rule || "past";
+    const TL = UI_TEXT[hindi ? "hi" : "en"].timeline;
     return (
       <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Another way to see it">
-        <h2 className="text-xl font-bold">{rule === "past" ? "Is the time finished?" : "Does it reach NOW?"}</h2>
+        <h2 className="text-xl font-bold" lang={hindi ? "hi-Latn" : "en"}>{TL[rule].heading}</h2>
         <Timeline rule={rule} />
-        <p className="text-base">
-          {rule === "past"
-            ? <>Ask: <b>“Can I point to WHEN on the calendar, and is it over?”</b> If yes → <b>simple past</b> (went, saw, bought).</>
-            : <>Ask: <b>“Is it still true or important now?”</b> If yes → <b>have/has + V3</b> (have lived, has left).</>}
-        </p>
+        <p className="text-base" lang={hindi ? "hi-Latn" : "en"}>{TL[rule].text}</p>
         <div className="mt-3 p-3 rounded-xl bg-white border border-slate-200">
-          <p className="text-sm text-slate-600">Correct sentence</p>
+          <p className="text-sm text-slate-600">{TL.correctSentence}</p>
           <p className="text-lg leading-snug">
             {fq && fq.format !== "explain" ? <CorrectSentence q={fq} /> : <Sentence text={fq?.answer || ""} markers={fq ? markersOf(fq) : []} />}
           </p>
         </div>
-        <Actions><Big onClick={() => loadQuestion(level, last?.verdict)}>Try a similar question</Big></Actions>
+        <Actions>
+          <HindiSwitch on={hindi} onClick={toggleHindi} />
+          <Big onClick={() => loadQuestion(level, last?.verdict)}>Try a similar question</Big>
+        </Actions>
       </Shell>
     );
   }
@@ -842,28 +846,32 @@ export default function Tutor() {
     ];
     const done = words.every(([w]) => sorted[w]);
     const allRight = words.every(([w, r]) => sorted[w] === r);
+    const L = UI_TEXT[hindi ? "hi" : "en"].lesson;
     return (
       <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Mini-lesson: time words">
-        <h2 className="text-xl font-bold">You made the same mix-up twice. Let’s fix the root: time words.</h2>
-        <p className="mt-1 text-base">Tap where each word belongs.</p>
+        <h2 className="text-xl font-bold" lang={hindi ? "hi-Latn" : "en"}>{L.heading}</h2>
+        <p className="mt-1 text-base" lang={hindi ? "hi-Latn" : "en"}>{L.instruction}</p>
         <div className="mt-3 space-y-2">
           {words.map(([w, r]) => {
             const pick = sorted[w];
             return (
               <div key={w} className="rounded-lg bg-white border border-amber-300 p-2">
-                <p className="font-semibold">{w} {pick && (pick === r ? "✓" : "✗ try again")}</p>
+                <p className="font-semibold">{w} {pick && (pick === r ? "✓" : L.tryAgain)}</p>
                 <div className="flex gap-2 mt-1">
                   <button onClick={() => setSorted({ ...sorted, [w]: "past" })}
-                    className={`flex-1 min-h-[48px] rounded-lg border-2 active:bg-amber-100 ${pick === "past" ? "bg-amber-200 border-amber-600" : "border-amber-300"}`}>Finished</button>
+                    className={`flex-1 min-w-0 min-h-[48px] px-1 rounded-lg border-2 text-sm leading-tight active:bg-amber-100 ${pick === "past" ? "bg-amber-200 border-amber-600" : "border-amber-300"}`}>{LESSON_BUTTONS.past}</button>
                   <button onClick={() => setSorted({ ...sorted, [w]: "perfect" })}
-                    className={`flex-1 min-h-[48px] rounded-lg border-2 active:bg-indigo-100 ${pick === "perfect" ? "bg-indigo-200 border-indigo-600" : "border-indigo-300"}`}>Connected to now</button>
+                    className={`flex-1 min-w-0 min-h-[48px] px-1 rounded-lg border-2 text-sm leading-tight active:bg-indigo-100 ${pick === "perfect" ? "bg-indigo-200 border-indigo-600" : "border-indigo-300"}`}>{LESSON_BUTTONS.perfect}</button>
                 </div>
               </div>
             );
           })}
         </div>
-        {done && allRight && <p className="mt-3 text-green-800 font-semibold">Great! Finished → went. Connected to now → have gone.</p>}
-        <Actions><Big disabled={!(done && allRight)} onClick={() => loadQuestion(level, last?.verdict)}>Back to practice (easier level)</Big></Actions>
+        {done && allRight && <p className="mt-3 text-green-800 font-semibold" lang={hindi ? "hi-Latn" : "en"}>{L.done}</p>}
+        <Actions>
+          <HindiSwitch on={hindi} onClick={toggleHindi} />
+          <Big disabled={!(done && allRight)} onClick={() => loadQuestion(level, last?.verdict)}>Back to practice (easier level)</Big>
+        </Actions>
       </Shell>
     );
   }

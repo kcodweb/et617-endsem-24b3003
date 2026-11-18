@@ -242,10 +242,40 @@ function Option({ letter, children, onClick }) {
   );
 }
 
+// ---------- Learn cards ----------
+// Card 3 contrasts the two Hindi patterns that cause M1 and M2 with the correct English (L8: home language Hindi).
+function Contrast({ hindi, right, wrong, rule }) {
+  return (
+    <div className={`rounded-xl bg-white border-2 p-3 ${rule === "past" ? "border-amber-300" : "border-indigo-300"}`}>
+      <p className="text-base text-slate-700">Hindi: <i>{hindi}</i></p>
+      <p className="font-semibold text-green-800">✓ {right}</p>
+      <p className="text-red-700">✗ <s>{wrong}</s></p>
+    </div>
+  );
+}
+
+const LEARN_CARDS = [
+  { rule: "past", icon: "🟧", title: "1. Finished time → simple past", sub: "yesterday, last year, in 2019, ago",
+    body: <>If the sentence says <b>WHEN</b> and that time is over — <i>yesterday, last week, in 2019, two days ago</i> — use the past: <b>I went</b>, <b>She bought</b>.</>,
+    hindi: "Hindi mein “main kal gaya hoon” chalta hai, par English mein “yesterday” ke saath “have gone” nahi aata." },
+  { rule: "perfect", icon: "🟦", title: "2. Connected to now → present perfect", sub: "since, for, ever, already, just",
+    body: <>If the action is linked to <b>NOW</b> — <i>since, for, ever, never, already, just, yet</i> — use <b>have/has + V3</b>: <b>I have lived here since 2020</b>.</>,
+    hindi: "“Since 2020” ka matlab: 2020 se ab tak. Isliye “am living” nahi, “have lived”." },
+  { rule: null, icon: "🔁", title: "3. Hindi vs English", sub: "Two Hindi patterns that don’t translate",
+    body: (
+      <div className="space-y-2">
+        <Contrast rule="past" hindi="Main kal gaya hoon." right="I went yesterday." wrong="I have gone yesterday." />
+        <Contrast rule="perfect" hindi="Main 2020 se yahaan reh raha hoon." right="I have lived here since 2020." wrong="I am living here since 2020." />
+      </div>
+    ),
+    hindi: "Hindi ka pattern seedha translate mat karo. Pehle time word dekho: khatam ho gaya → simple past; ab tak → have/has + V3." },
+];
+
 // ---------- the tutor ----------
 export default function Tutor() {
   const [screen, setScreen] = useState("home");
   const [card, setCard] = useState(0); // concept card index
+  const [conceptFrom, setConceptFrom] = useState("practice"); // idea cards opened from the Learn tab or before practice
   const [level, setLevel] = useState(1);
   const [q, setQ] = useState(null);
   const [input, setInput] = useState("");
@@ -309,11 +339,11 @@ export default function Tutor() {
     if (demo) {
       // Demo: start from a clean demo log every time, so the walkthrough is reproducible.
       setHistory([]); setEvents([]); setHindi(false);
-      setLevel(1); setCard(0); setScreen("concept");
+      setLevel(1); setCard(0); setConceptFrom("practice"); setScreen("concept");
       return;
     }
     setHistory((h) => h.map((x) => ({ ...x, session: "old" })));
-    if (firstTime) { setLevel(1); setCard(0); setScreen("concept"); return; }
+    if (firstTime) { setLevel(1); setCard(0); setConceptFrom("practice"); setScreen("concept"); return; }
     const lvl = profile.level || 1;
     setLevel(lvl);
     loadQuestion(lvl, null, { fresh: true });
@@ -426,7 +456,7 @@ export default function Tutor() {
   const tab = TAB_OF[screen] || null;
   function goTab(t) {
     if (t === "home") setScreen("home");
-    else if (t === "learn") { setCard(0); setScreen("concept"); }
+    else if (t === "learn") setScreen("learn");
     else if (t === "practice") start();
     else if (t === "mistakes") setScreen("mistakes");
     else if (t === "me") about();
@@ -491,33 +521,50 @@ export default function Tutor() {
     );
   }
 
-  if (screen === "game" || screen === "learn") return (
+  if (screen === "game") return (
     <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
-      <h2 className="text-2xl font-bold">{screen === "game" ? "Time-word game" : "Learn"}</h2>
+      <h2 className="text-2xl font-bold">Time-word game</h2>
       <p className="mt-2">Coming in the next step.</p>
     </Shell>
   );
 
+  if (screen === "learn") return (
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Learn">
+      <h2 className="text-2xl font-bold">Learn</h2>
+      <MiniTimelines />
+      <div className="mt-4 space-y-2">
+        {LEARN_CARDS.map((c, i) => (
+          <button key={c.title} onClick={() => { setCard(i); setConceptFrom("learn"); setScreen("concept"); }}
+            className={`w-full min-h-[64px] rounded-xl bg-white border-2 px-3 flex items-center gap-3 text-left active:bg-slate-50 ${
+              c.rule === "past" ? "border-amber-300" : c.rule === "perfect" ? "border-indigo-300" : "border-slate-300"}`}>
+            <span className="text-2xl" aria-hidden="true">{c.icon}</span>
+            <span className="flex-1"><b className="block">{c.title}</b><span className="text-sm text-slate-600">{c.sub}</span></span>
+            <span className="text-slate-400" aria-hidden="true">›</span>
+          </button>
+        ))}
+      </div>
+    </Shell>
+  );
+
   if (screen === "concept") {
-    const cards = [
-      { rule: "past", title: "1. Finished time → simple past",
-        body: <>If the sentence says <b>WHEN</b> and that time is over — <i>yesterday, last week, in 2019, two days ago</i> — use the past: <b>I went</b>, <b>She bought</b>.</>,
-        hindi: "Hindi mein “main kal gaya hoon” chalta hai, par English mein “yesterday” ke saath “have gone” nahi aata." },
-      { rule: "perfect", title: "2. Connected to now → present perfect",
-        body: <>If the action is linked to <b>NOW</b> — <i>since, for, ever, never, already, just, yet</i> — use <b>have/has + V3</b>: <b>I have lived here since 2020</b>.</>,
-        hindi: "“Since 2020” ka matlab: 2020 se ab tak. Isliye “am living” nahi, “have lived”." },
-    ];
-    const c = cards[card];
+    const c = LEARN_CARDS[card];
+    const fromLearn = conceptFrom === "learn";
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={`Idea ${card + 1}/2`}>
+      <Shell prog={prog} screenKey={`concept-${card}`} tab={tab} onTab={goTab} onAbout={about}
+        step={fromLearn ? `Learn ${card + 1}/${LEARN_CARDS.length}` : `Idea ${card + 1}/2`}>
         <h2 className="text-2xl font-bold">{c.title}</h2>
-        <Timeline rule={c.rule} />
-        <p className="text-lg">{c.body}</p>
-        <p className={`mt-3 p-3 rounded-lg bg-white border text-base ${c.rule === "past" ? "border-amber-300" : "border-indigo-300"}`}>🗣 {c.hindi}</p>
+        {c.rule ? <Timeline rule={c.rule} /> : <MiniTimelines />}
+        <div className="text-lg mt-2">{c.body}</div>
+        <p className={`mt-3 p-3 rounded-lg bg-white border text-base ${c.rule === "past" ? "border-amber-300" : c.rule === "perfect" ? "border-indigo-300" : "border-slate-300"}`}>🗣 {c.hindi}</p>
         <Actions>
-          {card === 0
-            ? <Big onClick={() => setCard(1)}>Next idea</Big>
-            : <Big onClick={() => loadQuestion(1, null)}>Start practice</Big>}
+          {fromLearn
+            ? <>
+                {card < LEARN_CARDS.length - 1 && <Big onClick={() => setCard(card + 1)}>Next card</Big>}
+                <Big kind="secondary" onClick={() => setScreen("learn")}>Back to Learn</Big>
+              </>
+            : card === 0
+              ? <Big onClick={() => setCard(1)}>Next idea</Big>
+              : <Big onClick={() => loadQuestion(1, null)}>Start practice</Big>}
         </Actions>
       </Shell>
     );

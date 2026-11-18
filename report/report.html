@@ -15,7 +15,7 @@
   code, pre { font-family: Consolas, monospace; font-size: 8.6pt; }
   pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 2mm; white-space: pre-wrap; margin: 1mm 0 2mm; }
   .shots { display: flex; gap: 3mm; flex-wrap: wrap; }
-  .shots figure { margin: 0; width: 31%; }
+  .shots figure { margin: 0; width: 23%; }
   .shots img { width: 100%; border: 1px solid #94a3b8; }
   figcaption { font-size: 8.5pt; color: #475569; }
   .past { background: #fde68a; padding: 0 1mm; border-radius: 2px; font-weight: 600; }
@@ -85,6 +85,7 @@ science and social-science answers too, not only in English.</p>
   <tr><td>q5</td><td>2</td><td>Fill</td><td>My father ___ (buy) a new phone <span class="past">last month</span>.</td><td>bought</td></tr>
   <tr><td>q6</td><td>2</td><td>Fix</td><td>I am knowing her <span class="perf">for five years</span>.</td><td>I have known her for five years.</td></tr>
   <tr><td>q7</td><td>3</td><td>Explain</td><td>Why is “She has <span class="perf">just</span> left the class” correct?</td><td>“Just” connects the action to now → present perfect.</td></tr>
+  <tr><td>q8</td><td>3</td><td>MCQ</td><td>Rani ___ to Delhi three times, but she ___ there <span class="past">in 2019</span> for the first time. (has been … has gone / has been … went / went … has gone)</td><td>has been … went</td></tr>
   <tr><td>q9</td><td>3</td><td>Explain</td><td>Why is “I have met the principal <span class="past">yesterday</span>” wrong?</td><td>“Yesterday” is finished → I met the principal yesterday.</td></tr>
   <tr><td>q10</td><td>3</td><td>Fill ×2</td><td>I ___ (know) Amit since Class 3, and we ___ (meet) first at a cricket match.</td><td>have known … met</td></tr>
   <tr><td>q11</td><td>3</td><td>MCQ</td><td>Papa ___ to Delhi. He will come back on Sunday. (has gone / has been / went)</td><td>has gone</td></tr>
@@ -116,21 +117,23 @@ Me ──► progress + settings (Hindi by default, left-handed mode, text size,
 laptop); every tap target is ≥ 48 px; answers, Check and Next sit in the bottom thumb zone; tap only, no hover; the
 keyboard does not hide the Check button; a left-handed mode mirrors the hint and switches to the left.</p>
 
-<h2 class="pb">D5 – Two contrasting learner scenarios (live app, ?demo=1)</h2>
+<h2 class="pb">D5 – Two contrasting learner scenarios (live app, ?demo=1, 360 × 740)</h2>
 <p><b>(a) Correct learner:</b> q1 “I ___ my homework yesterday.” → taps <b>finished</b> → “✓ Sahi!”, rule line
 “yesterday = finished time → simple past.”, decision line “no hint → harder question” → Level 1 → 2.</p>
 <div class="shots">
-  <figure><img src="img/a1-q1.jpg"><figcaption>A1 – q1 with the time word chip</figcaption></figure>
-  <figure><img src="img/a2-correct.jpg"><figcaption>A2 – correct: “Sahi!”, next = harder question</figcaption></figure>
+  <figure><img src="img/a1-q1.png"><figcaption>A1 – q1 with the time-word chip</figcaption></figure>
+  <figure><img src="img/a2-correct.png"><figcaption>A2 – correct: “Sahi!”, next = harder question</figcaption></figure>
+  <figure><img src="img/c1-m1-hindi.png"><figcaption>C1 – an M1 answer (“have finished”) with “Hindi mein samjhao” ON</figcaption></figure>
 </div>
 <p><b>(b) Learner with misconception M2:</b> q2 “We ___ (live) in Patna since 2021.” → types <b>am living</b> →
 “↺ Common mix-up: ‘am …ing’ with since/for”, <s>am living</s> → <b>have lived</b> → timeline “Does it reach NOW?” →
 q6 “I am knowing her for five years.” left unchanged → the same M2 again → mini-lesson “You made the same mix-up twice.
 Let’s fix the root: time words.” → back to practice at Level 1. The system responds differently to (a) and (b).</p>
 <div class="shots">
-  <figure><img src="img/b1-m2.jpg"><figcaption>B1 – first M2 (captured during the fade-in)</figcaption></figure>
-  <figure><img src="img/b2-q6.jpg"><figcaption>B2 – q6 after the timeline; answer left unchanged</figcaption></figure>
-  <figure><img src="img/b3-minilesson.jpg"><figcaption>B3 – second M2 → prerequisite mini-lesson, Level 1</figcaption></figure>
+  <figure><img src="img/b1-m2.png"><figcaption>B1 – first M2: answer comparison, rule line, “see it on a timeline”</figcaption></figure>
+  <figure><img src="img/b2-timeline.png"><figcaption>B2 – alternative explanation: “Does it reach NOW?”</figcaption></figure>
+  <figure><img src="img/b3-q6.png"><figcaption>B3 – q6, the sentence left unchanged</figcaption></figure>
+  <figure><img src="img/b4-minilesson.png"><figcaption>B4 – second M2 → prerequisite mini-lesson, Level 1</figcaption></figure>
 </div>
 
 <h2 class="pb">D6 – AI functionality specification</h2>
@@ -176,6 +179,11 @@ the tense of the key verb), the decision rule, and all Hindi text. The API key i
   <tr><td>first M1/M2/M3, or another error</td><td><b>alternative explanation</b>: timeline “Is the time finished?” / “Does it reach NOW?” + the corrected sentence, then a similar item</td></tr>
   <tr><td>the same misconception twice</td><td><b>prerequisite instruction</b>: sort 6 time words into Finished / Connected to now, then level −1</td></tr>
 </table>
+<p><b>Where each outcome is shown (D5):</b> harder question → <b>A2</b>; alternative explanation → <b>B2</b> (timeline,
+after the first M2 in B1); prerequisite instruction → <b>B4</b> (mini-lesson after the second M2). <b>Same level</b> (no
+screenshot): if the learner taps “💡 Need a hint?” on q1 and then answers correctly, the feedback shows “✓ Sahi!” with
+the grey line “Hint used → one more at this level” and the button “Next: one more at this level”; the level badge stays
+at 1 (the same happens after a correct answer that took more than 45 s, outside demo mode).</p>
 <ul>
   <li><b>L8 shaped the feedback:</b> errors come from Hindi patterns, so feedback names the time word and, for M1, contrasts Hindi “kal gaya hoon” with English; a Learn card shows both Hindi patterns side by side; a “Hindi mein samjhao” toggle switches every rule line to Roman-script Hindi and is saved in the profile.</li>
   <li><b>Scaffolding:</b> idea cards (pre-training with timelines; Mayer’s signalling via colour chips: amber = finished, indigo = connected to now) → recognition (MCQ) → production (fill, fix) → explanation (Bloom: understand → apply → analyse); a hint names the time word without giving the answer.</li>
@@ -200,16 +208,29 @@ and whether Hindi feedback users improve faster. A short think-aloud with 3–5 
 check whether the Hindi contrast card helps.</p>
 
 <h2>AI-use log and reflection</h2>
-<p><b>Tool used:</b> Claude Code (Claude Opus 5.5) in the Claude desktop app — one session, in order: choosing the
-card (P4-T7-L8-C3), DESIGN.md, code, deployment, live testing, the persona revision, the grading/demo/hint/UI passes and
-this report. Export of the chat: <b>session-export-1795011343647.zip</b> (full transcript, submitted on Moodle with this report). In-app AI: Claude <code>claude-haiku-5-5</code>.</p>
+<p><b>AI chats, in the order used</b> (exports submitted on Moodle with this report):</p>
+<ol>
+  <li><b>Claude chat on claude.ai</b> — read the exam brief, chose and checked the card, reviewed the repository after
+    each push, tested the app at 360 px, and wrote the prompts I gave to Claude Code. Export: <b>Claude-session.pdf</b>.</li>
+  <li><b>Claude Code session</b> (Claude Opus 5.5, Claude desktop app) — code, deployment to Vercel, live testing and
+    this report. Export: <b>session-export-1795011343647.zip</b>.</li>
+  <li><b>In-app AI</b> — Claude <code>claude-haiku-5-5</code> via the Anthropic API: question generation and explanation
+    evaluation (D6).</li>
+</ol>
+<h3>What the AI work showed</h3>
 <ul>
   <li><b>Checking the AI, not trusting it:</b> live testing showed every explanation silently falling back to offline — the model hit <code>max_tokens</code>; fixed by raising the limit and logging the stop reason.</li>
   <li>The offline fallback marked “is …ing” explanations correct and flagged forms the learner was rejecting (“am living is wrong”); rewritten as <code>ruleCheck()</code> with word boundaries and 6 tests.</li>
   <li>Exact-match grading marked “I saw the film last Sunday” wrong; grading now checks the tense of the key verb (21 tests), and an AI answer “has been living” led to accepting any present-perfect form.</li>
   <li>I revised the persona during the exam (Hindi home language, English-medium school) because it fits L8 better; the misconceptions stayed the same.</li>
-  <li>An AI-written commit briefly broke the answer-trimming regex (removed the last letter of answers); it was caught by checking the output and fixed two minutes later, before any deployment.</li>
+  <li>An AI-written commit briefly broke the answer-trimming regex (removed the last letter of answers); it was caught by checking the output and fixed within 16 seconds (commits e253993 at 19:02:40 → a35d0a7 at 19:02:56), before any deployment — the Vercel deployments around it were created at 18:59:44 and 19:04:42.</li>
   <li>Design decision kept with me: the AI only labels and generates; the adaptive rule is deterministic code that I can explain and change.</li>
+</ul>
+<h3>My reflection (in my own words)</h3>
+<ul>
+  <li>&nbsp;</li>
+  <li>&nbsp;</li>
+  <li>&nbsp;</li>
 </ul>
 </body>
 </html>

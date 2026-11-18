@@ -82,7 +82,7 @@ function Progress({ verdicts, total, level }) {
 
 // Bottom "thumb zone" action area (C3: key actions within thumb reach).
 function Actions({ children }) {
-  return <div className="mt-auto pt-4 flex flex-col gap-3">{children}</div>;
+  return <div className="actions mt-auto pt-4 flex flex-col gap-3">{children}</div>;
 }
 
 // One grey line on the feedback screen that explains why the tutor chose the next step (makes the rule visible).
@@ -350,6 +350,20 @@ export default function Tutor() {
     setEvents((e) => [...e, { type: "language", value: value ? "hi" : "en", qid: q?.id, t: Date.now() }]);
   }
 
+  // Settings live in the saved profile; every change is logged.
+  function setSetting(key, value) {
+    setProfile((p) => ({ ...p, [key]: value }));
+    setEvents((e) => [...e, { type: "setting", key, value, t: Date.now() }]);
+  }
+  const [confirmReset, setConfirmReset] = useState(false);
+  function resetProgress() {
+    // Keep the settings (language, hand, text size); clear answers, level, sessions and the game score.
+    setHistory([]);
+    setProfile((p) => ({ level: 1, sessions: 0, leftHanded: p.leftHanded, textSize: p.textSize }));
+    setEvents([{ type: "reset", t: Date.now() }]);
+    setLevel(1); setConfirmReset(false);
+  }
+
   const session = history.filter((h) => h.session === "current");
   const used = session.map((h) => h.qid);
 
@@ -539,12 +553,12 @@ export default function Tutor() {
     else if (t === "learn") setScreen("learn");
     else if (t === "practice") start();
     else if (t === "mistakes") setScreen("mistakes");
-    else if (t === "me") about();
+    else if (t === "me") setScreen("me");
   }
 
   // ---------- screens ----------
   if (screen === "about") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about}>
       <h1 className="text-2xl font-bold mb-2">About</h1>
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
       <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
@@ -575,7 +589,7 @@ export default function Tutor() {
       ["📒", `Practise my mistakes (${mistakes})`, mistakes ? "Your notebook of mix-ups" : "No mistakes yet", () => setScreen("mistakes")],
     ];
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={demo ? "Demo mode" : ""}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step={demo ? "Demo mode" : ""}>
         <h1 className="text-3xl font-bold">Namaste Ravi!</h1>
         <p className="text-lg mt-1">Kal ya abhi? Let’s practise <b>“I went”</b> vs <b>“I have gone”</b>.</p>
         <Big onClick={start}>▶ {startLabel}</Big>
@@ -607,7 +621,7 @@ export default function Tutor() {
     if (done) {
       const score = game.picks.filter((p) => p.ok).length;
       return (
-        <Shell prog={prog} screenKey="game-end" tab="home" onTab={goTab} onAbout={about} step="Time-word game">
+        <Shell prog={prog} screenKey="game-end" tab="home" onTab={goTab} settings={profile} onAbout={about} step="Time-word game">
           <h2 className="text-2xl font-bold text-center">Game over!</h2>
           <ScoreCircle correct={score} total={GAME_WORDS.length} />
           <p className="text-center text-lg">Best score: <b>{profile.bestGame ?? score}/10</b></p>
@@ -628,7 +642,7 @@ export default function Tutor() {
     const [word, rule, reason] = GAME_WORDS[game.i];
     const pick = game.picks[game.i];
     return (
-      <Shell prog={prog} screenKey={`game-${game.i}`} onExit={() => setScreen("home")} onAbout={about}
+      <Shell prog={prog} screenKey={`game-${game.i}`} onExit={() => setScreen("home")} settings={profile} onAbout={about}
         step={`Word ${game.i + 1}/${GAME_WORDS.length}`}>
         <div className="flex-1 flex flex-col justify-center items-center text-center">
           <p className="text-base text-slate-600">Is this time finished, or connected to now?</p>
@@ -654,7 +668,7 @@ export default function Tutor() {
   }
 
   if (screen === "learn") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Learn">
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Learn">
       <h2 className="text-2xl font-bold">Learn</h2>
       <MiniTimelines />
       <div className="mt-4 space-y-2">
@@ -675,7 +689,7 @@ export default function Tutor() {
     const c = LEARN_CARDS[card];
     const fromLearn = conceptFrom === "learn";
     return (
-      <Shell prog={prog} screenKey={`concept-${card}`} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}
+      <Shell prog={prog} screenKey={`concept-${card}`} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about}
         step={fromLearn ? `Learn ${card + 1}/${LEARN_CARDS.length}` : `Idea ${card + 1}/2`}>
         <h2 className="text-2xl font-bold">{c.title}</h2>
         {c.rule ? <Timeline rule={c.rule} /> : <MiniTimelines />}
@@ -697,12 +711,12 @@ export default function Tutor() {
 
   if (screen === "practice") {
     if (loading || !q) return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
     );
     const label = { mcq: "Choose the correct option", fill: "Fill in the blank", fix: "Find and fix the mistake", explain: "Explain in your own words" }[q.format];
     const source = demo ? "Demo mode · seed questions" : q.source === "ai" ? "AI-generated" : q.source === "offline" ? "Offline (AI unavailable)" : "Teacher-written";
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step={step}>
         {/* The question card is vertically centred in the space above the answers. */}
         <div className="flex-1 flex flex-col justify-center">
         <div className="q-card rounded-2xl bg-white border border-slate-200 shadow-[0_4px_20px_rgba(15,23,42,0.08)] p-4">
@@ -710,13 +724,13 @@ export default function Tutor() {
             <p className="text-sm font-semibold text-indigo-800 uppercase">{label}</p>
             <span className="shrink-0 rounded-full bg-slate-100 text-slate-700 text-[13px] px-2 py-0.5">{source}</span>
           </div>
-          <p className="text-2xl font-medium leading-snug"><Sentence text={q.prompt} markers={markersOf(q)} /></p>
+          <p className="qtext text-2xl font-medium leading-snug"><Sentence text={q.prompt} markers={markersOf(q)} /></p>
           {hintUsed ? (
             <p className="mt-3 p-3 rounded-lg bg-indigo-50 text-indigo-950 text-lg" lang={hindi ? "hi-Latn" : "en"}>
               💡 <Sentence text={hindi ? HINT.hi(q) : HINT.en(q)} markers={[{ marker: q.marker, rule: q.rule }]} />
             </p>
           ) : (
-            <button onClick={showHint} className="mt-2 min-h-[48px] px-2 -ml-2 rounded-lg text-indigo-800 font-semibold active:bg-indigo-50">
+            <button onClick={showHint} className="hint-btn mt-2 min-h-[48px] px-2 rounded-lg text-indigo-800 font-semibold active:bg-indigo-50">
               💡 Need a hint?
             </button>
           )}
@@ -753,7 +767,7 @@ export default function Tutor() {
     const explain = fq.format === "explain";
     const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step={step}>
         {/* 1. Status line */}
         <div className={`rounded-xl px-4 py-3 ${good ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
           <p className="text-2xl font-bold">{good ? "✓ Sahi!" : mixup ? "↺ Common mix-up" : "↺ Not quite"}</p>
@@ -768,11 +782,11 @@ export default function Tutor() {
               : <s className="font-semibold text-red-700 decoration-2">{last?.response}</s>}
           </p>
           {!good && <p className="text-base text-slate-700">{explain ? "Model answer:" : "Correct:"} <span className="font-semibold text-green-800">{fq.answer}</span></p>}
-          {!explain && <p className="pt-2 text-xl leading-snug"><CorrectSentence q={fq} /></p>}
+          {!explain && <p className="ftext pt-2 text-xl leading-snug"><CorrectSentence q={fq} /></p>}
         </div>
 
         {/* 3. One short rule line */}
-        <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>
+        <p className="ftext mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>
           <Sentence text={ruleLine} markers={[{ marker: fq.marker, rule: fq.rule }]} />
         </p>
         <p className="mt-1 text-sm text-slate-600">
@@ -797,7 +811,7 @@ export default function Tutor() {
     const fq = result?.fq || q; // the item just answered, with the time word of the part that was wrong
     const rule = fq?.rule || last?.rule || "past";
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Another way to see it">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Another way to see it">
         <h2 className="text-2xl font-bold">{rule === "past" ? "Is the time finished?" : "Does it reach NOW?"}</h2>
         <Timeline rule={rule} />
         <p className="text-lg">
@@ -824,7 +838,7 @@ export default function Tutor() {
     const done = words.every(([w]) => sorted[w]);
     const allRight = words.every(([w, r]) => sorted[w] === r);
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Mini-lesson: time words">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Mini-lesson: time words">
         <h2 className="text-xl font-bold">You made the same mix-up twice. Let’s fix the root: time words.</h2>
         <p className="mt-1 text-base">Tap where each word belongs.</p>
         <div className="mt-3 space-y-2">
@@ -849,10 +863,75 @@ export default function Tutor() {
     );
   }
 
+  if (screen === "me") {
+    const acc = (rule) => {
+      const s = history.filter((h) => h.rule === rule);
+      return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
+    };
+    const count = (v) => history.filter((h) => h.verdict === v).length;
+    const Switch = ({ label, on, onClick }) => (
+      <button role="switch" aria-checked={on} onClick={onClick}
+        className="w-full min-h-[52px] px-3 flex items-center justify-between rounded-xl bg-white border border-slate-200 text-left active:bg-slate-50">
+        <span>{label}</span>
+        <span className={`w-12 h-7 rounded-full p-1 ${on ? "bg-green-600" : "bg-slate-300"}`}>
+          <span className={`block w-5 h-5 rounded-full bg-white transition ${on ? "translate-x-5" : ""}`} />
+        </span>
+      </button>
+    );
+    return (
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Me">
+        <h2 className="text-2xl font-bold">My progress</h2>
+        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+          {[["Level", profile.level || 1], ["Sessions", profile.sessions || 0], ["Best game", profile.bestGame != null ? `${profile.bestGame}/10` : "—"]].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-white border border-slate-200 py-2"><p className="text-xl font-bold">{v}</p><p className="text-sm text-slate-600">{k}</p></div>
+          ))}
+        </div>
+        {[["Finished time → simple past", acc("past"), "bg-amber-500"], ["Connected to now → present perfect", acc("perfect"), "bg-indigo-700"]].map(([t, p, c]) => (
+          <div key={t} className="mt-3">
+            <p className="text-base flex justify-between"><span>{t}</span><b>{p}%</b></p>
+            <div className="h-3 rounded-full bg-slate-200"><div className={`h-3 rounded-full ${c}`} style={{ width: `${p}%` }} /></div>
+          </div>
+        ))}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[["M1", "“have + V3” with finished time"], ["M2", "“am …ing” with since/for"], ["M3", "“did” with ever/just"]].map(([v, t]) => (
+            <span key={v} className="rounded-full bg-orange-100 text-orange-950 px-3 py-1 text-sm font-semibold">{t} × {count(v)}</span>
+          ))}
+        </div>
+
+        <h2 className="text-2xl font-bold mt-5">Settings</h2>
+        <div className="mt-2 space-y-2">
+          <Switch label="Hindi explanations on by default" on={hindi} onClick={toggleHindi} />
+          <Switch label="Left-handed mode" on={!!profile.leftHanded} onClick={() => setSetting("leftHanded", !profile.leftHanded)} />
+          <div className="rounded-xl bg-white border border-slate-200 p-2">
+            <p className="px-1 pb-1">Text size</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[["normal", "Normal"], ["large", "Large"]].map(([v, l]) => (
+                <button key={v} onClick={() => setSetting("textSize", v)} aria-pressed={(profile.textSize || "normal") === v}
+                  className={`min-h-[48px] rounded-lg border-2 font-semibold active:bg-indigo-100 ${(profile.textSize || "normal") === v ? "bg-indigo-700 text-white border-indigo-700" : "border-slate-300"}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {confirmReset ? (
+            <div className="rounded-xl bg-red-50 border-2 border-red-300 p-3">
+              <p className="font-semibold text-red-900">Delete all your answers, level and scores on this phone? Settings are kept.</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button onClick={resetProgress} className="min-h-[48px] rounded-lg bg-red-700 text-white font-semibold active:bg-red-800">Yes, reset</button>
+                <button onClick={() => setConfirmReset(false)} className="min-h-[48px] rounded-lg border-2 border-slate-300 font-semibold active:bg-slate-100">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmReset(true)} className="w-full min-h-[52px] rounded-xl bg-white border border-red-300 text-red-800 font-semibold active:bg-red-50">Reset my progress</button>
+          )}
+          <button onClick={about} className="w-full min-h-[52px] rounded-xl bg-white border border-slate-200 font-semibold active:bg-slate-50">About this app</button>
+        </div>
+      </Shell>
+    );
+  }
+
   if (screen === "mistakes") {
     const TAG = { M1: "“have + V3” with finished time", M2: "“am …ing” with since/for", M3: "“did” with ever/just", other: "Not quite" };
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Mistakes">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Mistakes">
         <h2 className="text-2xl font-bold">My mistake notebook</h2>
         {!mistakes.length && <p className="mt-3 rounded-xl bg-green-100 text-green-900 p-3 font-semibold">No mistakes yet — great!</p>}
         <div className="mt-3 space-y-2">
@@ -886,7 +965,7 @@ export default function Tutor() {
       return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
     };
     return (
-      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Your progress">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Your progress">
         <h2 className="text-2xl font-bold text-center">{mode === "mistakes" ? "Mistakes practice done!" : "Well done, you finished!"}</h2>
         <ScoreCircle correct={correct} total={session.length} />
         <p className="text-center text-base text-slate-700">reached level {level}</p>

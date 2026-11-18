@@ -24,6 +24,37 @@ body {
   }
 }
 
+/* Me → Text size: Large scales the question and feedback text. */
+.phone[data-size="large"] .qtext {
+  font-size: 1.9rem;
+  line-height: 1.3;
+}
+.phone[data-size="large"] .ftext {
+  font-size: 1.35rem;
+}
+
+/* C3, either hand: the answer area sits towards the thumb (right by default, left in left-handed mode),
+   and the hint button sits on the same side. */
+.actions > * {
+  width: 92%;
+}
+.phone[data-hand="right"] .actions {
+  align-items: flex-end;
+}
+.phone[data-hand="left"] .actions {
+  align-items: flex-start;
+}
+.hint-btn {
+  display: block;
+}
+.phone[data-hand="right"] .hint-btn {
+  margin-left: auto;
+  margin-right: -0.5rem;
+}
+.phone[data-hand="left"] .hint-btn {
+  margin-left: -0.5rem;
+}
+
 /* A short fade + slide when a new screen appears. */
 @keyframes screen-in {
   from {

@@ -108,6 +108,30 @@ function HindiSwitch({ on, onClick }) {
   );
 }
 
+// Speech input (viva change): speak the answer instead of typing it. Uses the browser's Web Speech API
+// (Chrome/Edge/Android); the button is hidden where the browser has no speech recognition.
+// The spoken text goes into the answer box so the learner can check or edit it before pressing Check.
+function MicButton({ onText, lang = "en-IN" }) {
+  const [listening, setListening] = useState(false);
+  const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (!SR) return null;
+  function listen() {
+    const rec = new SR();
+    rec.lang = lang; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = (e) => onText(e.results[0][0].transcript);
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    setListening(true);
+    rec.start();
+  }
+  return (
+    <button onClick={listen} disabled={listening}
+      className="w-full min-h-[52px] rounded-xl border-2 border-indigo-300 bg-white text-indigo-800 text-base font-semibold active:bg-indigo-50 disabled:bg-indigo-50">
+      {listening ? "🎙 Listening… speak now" : "🎤 Speak your answer"}
+    </button>
+  );
+}
+
 // When the keyboard opens, scroll so the Check button (just below the input) is in view.
 function keepCheckVisible() {
   setTimeout(() => document.getElementById("check-btn")?.scrollIntoView({ block: "end", behavior: "smooth" }), 300);
@@ -766,6 +790,7 @@ export default function Tutor() {
                     placeholder={q.format === "fix" ? "Type the correct sentence"
                       : (q.prompt.match(/___/g) || []).length > 1 ? "Fill both blanks, e.g. have seen … went" : "Type the verb, e.g. went"}
                     className="w-full min-h-[52px] rounded-xl border-2 border-indigo-300 px-3 text-base" />}
+              <MicButton onText={(t) => { setInput(t); setEvents((e) => [...e, { type: "speech", qid: q.id, text: t, t: Date.now() }]); }} />
               <Big id="check-btn" onClick={() => check(input)} disabled={!input.trim()}>Check</Big>
             </>
           )}

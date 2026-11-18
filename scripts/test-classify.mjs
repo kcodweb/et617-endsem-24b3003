@@ -25,7 +25,21 @@ const cases = [
   ["q13", "Yesterday I have gone to the market. I have lived in Patna since 2019.", "M1"],
 ];
 
+// An AI-style item whose answer is "has been living": the plain present perfect must also count.
+const ai = { id: "ai", format: "fix", rule: "perfect", prompt: "My uncle is living in Patna since 2015.",
+  answer: "My uncle has been living in Patna since 2015.", accept: [], marker: "since 2015" };
+const extra = [
+  [ai, "My uncle has lived in Patna since 2015.", "correct"],
+  [ai, "My uncle is living in Patna since 2015.", "M2"],
+];
+
 let failed = 0;
+for (const [q, response, expected] of extra) {
+  const got = classify(q, response);
+  const ok = got === expected;
+  if (!ok) failed++;
+  console.log(`${ok ? "PASS" : "FAIL"}  ai   ${got.padEnd(7)} (expected ${expected.padEnd(7)})  "${response}"`);
+}
 for (const [id, response, expected] of cases) {
   const q = byId(id);
   if (!q) { console.log(`SKIP  ${id} not in bank`); continue; }

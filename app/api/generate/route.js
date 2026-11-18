@@ -13,6 +13,7 @@ Rules:
 - "rule":"past" means the sentence has a FINISHED time marker (yesterday, last week, in 2019, ago) -> simple past.
 - "rule":"perfect" means the time is connected to now (since, for, ever, never, already, just, yet) -> present perfect.
 - "marker" must be the exact time words that appear in "prompt".
+- For "perfect" items the answer uses the simple present perfect (have/has + V3, e.g. "has lived"), not "has been living".
 - fill: prompt contains ___ followed by the base verb in brackets, e.g. "She ___ (eat) lunch at 2 pm."
 - fix: prompt is a sentence containing exactly one tense error; answer is the corrected full sentence.
 Levels:

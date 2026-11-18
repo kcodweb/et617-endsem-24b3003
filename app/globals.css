@@ -6,3 +6,15 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* C3: on a laptop or tablet, show the 360px app as a phone on a neutral background. */
+@media (min-width: 400px) {
+  body {
+    background: #e2e8f0;
+  }
+  .phone {
+    border-left: 1px solid #cbd5e1;
+    border-right: 1px solid #cbd5e1;
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.18);
+  }
+}

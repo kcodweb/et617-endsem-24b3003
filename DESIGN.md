@@ -92,9 +92,15 @@ After each answer the tutor classifies the response as `correct`, `M1`, `M2` or 
 - **Fallback:** if the call fails or fails validation → serve the next item from the seed bank (labelled "offline question").
 
 ## C3 – Mobile-first, one-handed
-- Designed at 360 px width, single column.
-- All answer buttons and "Next" sit in the bottom 40% of the screen (thumb zone), each ≥ 48 px tall.
-- No hover-only interactions; everything is tap-only.
+- **360 px column:** the whole app (header, content, footer) is one column at most 360 px wide on every screen. On a
+  laptop or tablet it is shown as a "phone" (border and shadow on a grey background), so C3 is visible in the demo too.
+- **48 px minimum:** every tappable element is at least 48 px tall: answer options, Check/Next (52 px), the Hindi
+  toggle, the Hint button, the mini-lesson "Finished / Connected to now" buttons and the footer "About" link.
+- **Thumb zone:** primary actions sit in the bottom action area (pushed down with `mt-auto`), within reach of the thumb
+  of the hand holding the phone.
+- **Keyboard:** on fill/fix/explain items the Check button sits directly under the input in normal flow (no fixed
+  positioning), the viewport resizes when the keyboard opens (`interactive-widget=resizes-content`), and Enter submits.
+- **Tap only:** no hover-only interactions; buttons have visible pressed (`active:`) states.
 
 ## Screens / states (≥ 5)
 1. Welcome + diagnostic (2 quick items) → 2. Concept cards → 3. Practice (MCQ / fill / fix / explain)

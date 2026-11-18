@@ -12,17 +12,19 @@ const DEMO_STORE = "kya-demo-v1";
 const DEMO_ORDER = ["q1", "q2", "q6", "q4", "q3", "q7", "q5", "q9"];
 
 // ---------- small UI pieces ----------
+// C3: the whole app (header, main, footer) is one 360px phone-width column. On wider screens it gets a
+// border and shadow on a neutral background, so it looks like a phone on a laptop too.
 function Shell({ children, onAbout, step }) {
   return (
-    <div className="min-h-dvh flex flex-col bg-amber-50 text-slate-900">
+    <div className="phone w-full max-w-[360px] mx-auto min-h-dvh flex flex-col bg-amber-50 text-slate-900">
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-amber-200">
         <span className="font-bold text-lg">Kal ya Abhi?</span>
         {step && <span className="text-sm text-slate-600">{step}</span>}
       </header>
-      <main className="flex-1 flex flex-col w-full max-w-[420px] mx-auto px-4 py-4">{children}</main>
-      <footer className="text-center text-xs text-slate-600 py-2 border-t border-amber-200 bg-white">
-        ET 617 · ID {ROLL} ·{" "}
-        <button onClick={onAbout} className="underline py-1 px-2">About</button>
+      <main className="flex-1 flex flex-col w-full px-4 py-4">{children}</main>
+      <footer className="flex items-center justify-center text-xs text-slate-600 border-t border-amber-200 bg-white">
+        <span>ET 617 · ID {ROLL} ·</span>
+        <button onClick={onAbout} className="min-h-[48px] px-4 underline active:bg-amber-100">About</button>
       </footer>
     </div>
   );
@@ -33,17 +35,24 @@ function Actions({ children }) {
   return <div className="mt-auto pt-4 flex flex-col gap-3">{children}</div>;
 }
 
-function Big({ children, onClick, kind = "primary", disabled }) {
+// When the keyboard opens, scroll so the Check button (just below the input) is in view.
+function keepCheckVisible() {
+  setTimeout(() => document.getElementById("check-btn")?.scrollIntoView({ block: "end", behavior: "smooth" }), 300);
+}
+
+function Big({ children, onClick, kind = "primary", disabled, id }) {
   const styles = {
     primary: "bg-indigo-700 text-white active:bg-indigo-800",
     option: "bg-white border-2 border-indigo-300 text-slate-900 active:bg-indigo-50",
-    ghost: "bg-transparent text-indigo-800 underline",
+    ghost: "bg-transparent text-indigo-800 underline active:bg-indigo-50",
+    secondary: "bg-white border-2 border-amber-400 text-slate-900 active:bg-amber-100",
   };
   return (
     <button
+      id={id}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full min-h-[52px] rounded-xl px-4 text-lg font-semibold disabled:opacity-40 ${styles[kind]}`}
+      className={`w-full min-h-[52px] rounded-xl px-4 text-lg font-semibold disabled:opacity-40 active:scale-[0.98] ${styles[kind]}`}
     >
       {children}
     </button>
@@ -284,13 +293,16 @@ export default function Tutor() {
             q.options.map((o) => <Big key={o} kind="option" onClick={() => check(o)}>{o}</Big>)
           ) : (
             <>
+              {/* Input and Check sit together in normal flow (no fixed positioning), so when the on-screen
+                  keyboard opens the page resizes and the Check button stays directly under the input. */}
               {q.format === "explain"
-                ? <textarea value={input} onChange={(e) => setInput(e.target.value)} rows={3}
+                ? <textarea value={input} onChange={(e) => setInput(e.target.value)} rows={3} onFocus={keepCheckVisible}
                     placeholder="Because…" className="w-full rounded-xl border-2 border-indigo-300 p-3 text-lg" />
-                : <input value={input} onChange={(e) => setInput(e.target.value)} autoCapitalize="none"
+                : <input value={input} onChange={(e) => setInput(e.target.value)} autoCapitalize="none" onFocus={keepCheckVisible}
+                    enterKeyHint="done" onKeyDown={(e) => e.key === "Enter" && input.trim() && check(input)}
                     placeholder={q.format === "fill" ? "Type the verb, e.g. went" : "Type the correct sentence"}
                     className="w-full min-h-[52px] rounded-xl border-2 border-indigo-300 px-3 text-lg" />}
-              <Big onClick={() => check(input)} disabled={!input.trim()}>Check</Big>
+              <Big id="check-btn" onClick={() => check(input)} disabled={!input.trim()}>Check</Big>
             </>
           )}
         </Actions>
@@ -314,7 +326,7 @@ export default function Tutor() {
         </div>
         <Actions>
           <button role="switch" aria-checked={hindi} onClick={toggleHindi}
-            className="w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white px-4 flex items-center justify-between text-lg font-semibold">
+            className="w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white active:bg-amber-100 px-4 flex items-center justify-between text-lg font-semibold">
             <span>🗣 Hindi mein samjhao</span>
             <span className={`w-12 h-7 rounded-full p-1 transition ${hindi ? "bg-green-600" : "bg-slate-300"}`}>
               <span className={`block w-5 h-5 rounded-full bg-white transition ${hindi ? "translate-x-5" : ""}`} />
@@ -362,9 +374,9 @@ export default function Tutor() {
                 <p className="font-semibold">{w} {pick && (pick === r ? "✓" : "✗ try again")}</p>
                 <div className="flex gap-2 mt-1">
                   <button onClick={() => setSorted({ ...sorted, [w]: "past" })}
-                    className={`flex-1 min-h-[44px] rounded-lg border-2 ${pick === "past" ? "bg-amber-200 border-amber-600" : "border-amber-300"}`}>Finished</button>
+                    className={`flex-1 min-h-[48px] rounded-lg border-2 active:bg-amber-100 ${pick === "past" ? "bg-amber-200 border-amber-600" : "border-amber-300"}`}>Finished</button>
                   <button onClick={() => setSorted({ ...sorted, [w]: "perfect" })}
-                    className={`flex-1 min-h-[44px] rounded-lg border-2 ${pick === "perfect" ? "bg-indigo-200 border-indigo-600" : "border-indigo-300"}`}>Connected to now</button>
+                    className={`flex-1 min-h-[48px] rounded-lg border-2 active:bg-indigo-100 ${pick === "perfect" ? "bg-indigo-200 border-indigo-600" : "border-indigo-300"}`}>Connected to now</button>
                 </div>
               </div>
             );

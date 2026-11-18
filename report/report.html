@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ET 617 End-Sem Report – 24B3003</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.42; color: #0f172a; }
+  h1 { font-size: 18pt; margin: 0 0 2mm; }
+  h2 { font-size: 13pt; margin: 6mm 0 2mm; border-bottom: 2px solid #4338ca; padding-bottom: 1mm; color: #312e81; }
+  h3 { font-size: 11pt; margin: 3mm 0 1mm; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0; }
+  th, td { border: 1px solid #cbd5e1; padding: 1.2mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #eef2ff; }
+  code, pre { font-family: Consolas, monospace; font-size: 8.6pt; }
+  pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 2mm; white-space: pre-wrap; margin: 1mm 0 2mm; }
+  .shots { display: flex; gap: 3mm; flex-wrap: wrap; }
+  .shots figure { margin: 0; width: 31%; }
+  .shots img { width: 100%; border: 1px solid #94a3b8; }
+  figcaption { font-size: 8.5pt; color: #475569; }
+  .past { background: #fde68a; padding: 0 1mm; border-radius: 2px; font-weight: 600; }
+  .perf { background: #e0e7ff; padding: 0 1mm; border-radius: 2px; font-weight: 600; }
+  .pb { page-break-before: always; }
+  ul { margin: 1mm 0 2mm; padding-left: 6mm; }
+</style>
+</head>
+<body>
+
+<h1>Kal ya Abhi? — an adaptive tense tutor</h1>
+<p>ET 617 End-Semester Examination · 18 Nov 2026 · <b>ID 24B3003</b></p>
+
+<h2>Identity card</h2>
+<table>
+  <tr><th>ID</th><td>24B3003</td></tr>
+  <tr><th>P</th><td>P4 – Adaptive tutor with automatic question generation</td></tr>
+  <tr><th>T</th><td>P4-T7 – English tenses: simple past vs present perfect (ESL)</td></tr>
+  <tr><th>L</th><td>L8 – Learner whose home language differs from the school medium (Hindi at home, English-medium school)</td></tr>
+  <tr><th>C</th><td>C3 – Mobile-first, one-handed</td></tr>
+  <tr><th>Live app</th><td>https://et617-24b3003.vercel.app (reproducible walkthrough: https://et617-24b3003.vercel.app/?demo=1)</td></tr>
+  <tr><th>Repository</th><td>https://github.com/kcodweb/et617-endsem-24b3003</td></tr>
+  <tr><th>Starter / libraries</th><td><code>create-next-app</code> (Next.js 15, React 19, Tailwind CSS 4). No UI component library. AI: Anthropic Claude <code>claude-haiku-5-5</code> via the Messages API.</td></tr>
+</table>
+
+<h2>D1 – Educational problem</h2>
+<p>Ravi studies in an English-medium CBSE school in Patna, but Hindi is his home language. Every subject is taught and
+examined in English, so he writes all his answers in English while thinking in Hindi and translating. Hindi freely
+combines a perfect-looking form with a finished-time word (“main kal gaya hoon”) and a continuous form with “since”
+(“main 2020 se yahaan reh raha hoon”), so he writes <i>“I have gone to the market yesterday”</i> and <i>“I am living here
+since 2020”</i>. Teachers mark these wrong without naming the rule, so the errors return — and they cost him marks in
+science and social-science answers too, not only in English.</p>
+<p><b>Learning outcomes.</b> The learner will be able to:</p>
+<ol>
+  <li><b>Classify</b> a time expression (<span class="past">yesterday</span>, <span class="past">last year</span>, <span class="past">two days ago</span> vs <span class="perf">since</span>, <span class="perf">for</span>, <span class="perf">ever</span>, <span class="perf">already</span>, <span class="perf">just</span>) as “finished time” or “connected to now” (time-word game ≥ 8/10).</li>
+  <li><b>Choose and produce</b> the correct form (simple past <i>went</i> vs present perfect <i>have gone</i>) in a sentence (≥ 4 of 5 mixed items).</li>
+  <li><b>Explain</b> in one sentence why a tense is correct by referring to the time word or the “connected to now” meaning (rubric score 2, see D8).</li>
+</ol>
+<p><b>Context of use:</b> at home in the evening after homework, about 15–20 minutes, on his father’s budget Android phone (360 px), held in one hand.</p>
+
+<h2>D2 – Learner persona</h2>
+<table>
+  <tr><th>Name / age</th><td>Ravi Kumar, 13, Class 8, English-medium CBSE school, Patna (Bihar)</td></tr>
+  <tr><th>Languages</th><td>Home language Hindi (family, friends); school medium English for all subjects — he thinks in Hindi and translates.</td></tr>
+  <tr><th>Prior knowledge</th><td>Knows the verb table (go/went/gone, see/saw/seen); forms the simple present and present continuous; has not understood the <i>meaning</i> difference between simple past and present perfect.</td></tr>
+  <tr><th>Misconception M1</th><td>Present perfect with a finished time, transferred from “main kal gaya hoon”: <i>“I have gone yesterday.”</i> He believes “have + V3 = past”.</td></tr>
+  <tr><th>Misconception M2</th><td>Continuous/simple present with since/for, transferred from “2020 se reh raha hoon”: <i>“I am living here since 2020.”</i></td></tr>
+  <tr><th>(Extra, M3)</th><td>Simple past for experience questions: <i>“Did you ever see a tiger?”</i></td></tr>
+  <tr><th>Device / time</th><td>Father’s Android phone, ~20 minutes after homework, often one hand free.</td></tr>
+  <tr><th>Motivation</th><td>Wants to stop losing marks for grammar and not be laughed at when he speaks; likes quick wins; gives up after unexplained red crosses.</td></tr>
+</table>
+
+<h2>D3 – Educational content</h2>
+<h3>Concept explanation (Learn tab, each with a timeline diagram and a Hindi bridge line)</h3>
+<ol>
+  <li><b>Finished time → simple past.</b> “If the sentence says WHEN and that time is over — yesterday, last week, in 2019, two days ago — use the past: I went, she bought.” Bridge: “Hindi mein ‘main kal gaya hoon’ chalta hai, par English mein ‘yesterday’ ke saath ‘have gone’ nahi aata.”</li>
+  <li><b>Connected to now → present perfect.</b> “If the action is linked to NOW — since, for, ever, never, already, just, yet — use have/has + V3: I have lived here since 2020.” Bridge: “‘Since 2020’ ka matlab: 2020 se ab tak. Isliye ‘am living’ nahi, ‘have lived’.”</li>
+  <li><b>Hindi vs English</b> (contrast card): <i>Main kal gaya hoon</i> → ✓ I went yesterday / ✗ I have gone yesterday; <i>Main 2020 se yahaan reh raha hoon</i> → ✓ I have lived here since 2020 / ✗ I am living here since 2020.</li>
+</ol>
+<h3>Tasks (teacher-written seed bank, 4 formats; the AI generates more of the same formats)</h3>
+<table>
+  <tr><th>#</th><th>Level</th><th>Format</th><th>Item</th><th>Model answer</th></tr>
+  <tr><td>q1</td><td>1</td><td>MCQ</td><td>I ___ my homework <span class="past">yesterday</span>. (finished / have finished)</td><td>finished</td></tr>
+  <tr><td>q2</td><td>1</td><td>Fill</td><td>We ___ (live) in Patna <span class="perf">since 2021</span>.</td><td>have lived</td></tr>
+  <tr><td>q3</td><td>1</td><td>MCQ</td><td>___ you <span class="perf">ever</span> ___ a tiger? (Did … see / Have … seen)</td><td>Have … seen</td></tr>
+  <tr><td>q4</td><td>2</td><td>Fix</td><td>I have seen that film <span class="past">last Sunday</span>.</td><td>I saw that film last Sunday.</td></tr>
+  <tr><td>q5</td><td>2</td><td>Fill</td><td>My father ___ (buy) a new phone <span class="past">last month</span>.</td><td>bought</td></tr>
+  <tr><td>q6</td><td>2</td><td>Fix</td><td>I am knowing her <span class="perf">for five years</span>.</td><td>I have known her for five years.</td></tr>
+  <tr><td>q7</td><td>3</td><td>Explain</td><td>Why is “She has <span class="perf">just</span> left the class” correct?</td><td>“Just” connects the action to now → present perfect.</td></tr>
+  <tr><td>q9</td><td>3</td><td>Explain</td><td>Why is “I have met the principal <span class="past">yesterday</span>” wrong?</td><td>“Yesterday” is finished → I met the principal yesterday.</td></tr>
+  <tr><td>q10</td><td>3</td><td>Fill ×2</td><td>I ___ (know) Amit since Class 3, and we ___ (meet) first at a cricket match.</td><td>have known … met</td></tr>
+  <tr><td>q11</td><td>3</td><td>MCQ</td><td>Papa ___ to Delhi. He will come back on Sunday. (has gone / has been / went)</td><td>has gone</td></tr>
+  <tr><td>q12</td><td>3</td><td>Fill ×2</td><td>When ___ you ___ (reach) Patna?</td><td>did … reach</td></tr>
+  <tr><td>q13</td><td>3</td><td>Fix (2 errors)</td><td>Yesterday I have gone to the market. I am living in Patna since 2019.</td><td>Yesterday I went to the market. I have lived in Patna since 2019.</td></tr>
+</table>
+<h3>Feedback (shown with the learner’s answer struck through, the correct answer and the full corrected sentence)</h3>
+<table>
+  <tr><th>Verdict</th><th>English rule line</th><th>Hindi rule line (“Hindi mein samjhao” toggle)</th></tr>
+  <tr><td>Correct</td><td><span class="past">yesterday</span> = finished time → simple past.</td><td>yesterday = khatam ho chuka samay → simple past.</td></tr>
+  <tr><td>M1</td><td>yesterday = finished time → simple past, not have/has + V3.</td><td>yesterday khatam ho chuka hai. Hindi “kal gaya hoon” ≠ English “have gone” → simple past.</td></tr>
+  <tr><td>M2</td><td><span class="perf">since 2021</span> = from then until now → have/has + V3, not am/is …ing.</td><td>since 2021 = tab se ab tak → “have/has + V3”, “am/is …ing” nahi.</td></tr>
+  <tr><td>M3</td><td>ever = your life up to now → have/has + V3, not did.</td><td>ever = ab tak ki zindagi mein → “have/has + V3”, “did” nahi.</td></tr>
+</table>
+
+<h2>D4 – Working application</h2>
+<p>URL: <b>https://et617-24b3003.vercel.app</b>. The footer “ET 617 · ID 24B3003 · About” is on every screen.</p>
+<pre>Tabs (bottom, thumb zone): Home · Learn · Practice · Mistakes · Me
+Home ─┬─ Start / Continue practice (saved level) ──► Practice loop
+      ├─ Learn the 2 ideas ──► idea cards        ├─ Time-word game (10 words, best score saved)
+      └─ Practise my mistakes (N) ──► Mistakes
+Practice loop (tab bar hidden, "✕ Exit" in header):
+  Question (MCQ / fill / fix / explain, 💡 hint) ──► Feedback (status, answer comparison, corrected sentence,
+  rule line, decision line, Hindi toggle) ──► harder | same level | timeline + similar item | time-word
+  mini-lesson ──► … ──► Summary (score circle, per-rule bars, mix-up tags)
+Mistakes ──► notebook ──► Practise my mistakes (≤5 items on the same rules) ──► Summary
+Me ──► progress + settings (Hindi by default, left-handed mode, text size, reset) ──► About</pre>
+<p><b>C3 (mobile-first, one-handed), visible in the app:</b> the whole app is one 360 px column (shown as a phone on a
+laptop); every tap target is ≥ 48 px; answers, Check and Next sit in the bottom thumb zone; tap only, no hover; the
+keyboard does not hide the Check button; a left-handed mode mirrors the hint and switches to the left.</p>
+
+<h2 class="pb">D5 – Two contrasting learner scenarios (live app, ?demo=1)</h2>
+<p><b>(a) Correct learner:</b> q1 “I ___ my homework yesterday.” → taps <b>finished</b> → “✓ Sahi!”, rule line
+“yesterday = finished time → simple past.”, decision line “no hint → harder question” → Level 1 → 2.</p>
+<div class="shots">
+  <figure><img src="img/a1-q1.jpg"><figcaption>A1 – q1 with the time word chip</figcaption></figure>
+  <figure><img src="img/a2-correct.jpg"><figcaption>A2 – correct: “Sahi!”, next = harder question</figcaption></figure>
+</div>
+<p><b>(b) Learner with misconception M2:</b> q2 “We ___ (live) in Patna since 2021.” → types <b>am living</b> →
+“↺ Common mix-up: ‘am …ing’ with since/for”, <s>am living</s> → <b>have lived</b> → timeline “Does it reach NOW?” →
+q6 “I am knowing her for five years.” left unchanged → the same M2 again → mini-lesson “You made the same mix-up twice.
+Let’s fix the root: time words.” → back to practice at Level 1. The system responds differently to (a) and (b).</p>
+<div class="shots">
+  <figure><img src="img/b1-m2.jpg"><figcaption>B1 – first M2 (captured during the fade-in)</figcaption></figure>
+  <figure><img src="img/b2-q6.jpg"><figcaption>B2 – q6 after the timeline; answer left unchanged</figcaption></figure>
+  <figure><img src="img/b3-minilesson.jpg"><figcaption>B3 – second M2 → prerequisite mini-lesson, Level 1</figcaption></figure>
+</div>
+
+<h2 class="pb">D6 – AI functionality specification</h2>
+<h3>AI feature 1 – question generation (<code>app/api/generate/route.js</code>)</h3>
+<p><b>What it does:</b> writes the next practice item for the learner’s level, target rule and last misconception.
+<b>Input:</b> the system prompt below + a user message such as
+<code>Level: 2. Target rule: perfect. Learner's last misconception: M2. Do not repeat these sentences: [...]</code>.</p>
+<pre>You write ONE English grammar practice item for Ravi, a 13-year-old Class 8 learner at an English-medium CBSE
+school in Patna, Bihar. His home language is Hindi; English is his school medium for all subjects, so he thinks in
+Hindi and translates. Topic: simple past vs present perfect. Use simple vocabulary and Indian everyday contexts …
+Return ONLY JSON: {"format":"mcq"|"fill"|"fix","rule":"past"|"perfect","prompt","options","answer","accept","marker"}
+Rules: "past" = FINISHED time marker → simple past; "perfect" = connected to now → present perfect; "marker" must
+be the exact time words in "prompt"; perfect answers use have/has + V3, not "has been living"; fill = ___ + (base
+verb); fix = exactly one tense error. Levels: 1 single clause, obvious marker; 2 questions, negatives, for vs since;
+3 has gone vs has been, When-questions, two-clause context. Still exactly ONE blank / ONE error.</pre>
+<p><b>Real output (live):</b> <code>{"format":"fill","rule":"perfect","prompt":"My uncle ___ (work) at the railway station in Patna since 2015.","answer":"has worked","marker":"since 2015"}</code></p>
+<p><b>Checks before the learner sees it:</b> allowed format and rule; the marker literally appears in the sentence;
+the answer’s tense agrees with the rule (a “past” item may not have a have/has answer, a “perfect” item must); MCQ
+options contain the answer; a fill item contains “___”. <b>Fallback:</b> timeout (12 s), API error, unparseable JSON or a
+failed check → the next unseen teacher-written item at that level, labelled “Offline (AI unavailable)”.</p>
+
+<h3>AI feature 2 – explanation evaluation and misconception diagnosis (<code>app/api/evaluate/route.js</code>)</h3>
+<p><b>What it does:</b> classifies Ravi’s free-text “why” answer as correct / M1 / M2 / other and writes ≤ 2 sentences of feedback.</p>
+<pre>You are a kind English tutor for Ravi (13, Class 8, English-medium CBSE school in Patna; Hindi is his home
+language …). Ravi may write in English, Hindi or Hinglish: judge the reasoning, not the language. Classify:
+"correct" refers to the time marker or finished vs connected-to-now; "M1" thinks have/has + V3 can go with a finished
+time; "M2" thinks since/for go with am/is …ing; "other". Return ONLY JSON {"verdict","feedback"}. Start with "Sahi!"
+ONLY when correct, otherwise "Achha try!"; always name the time word.</pre>
+<p><b>Real output (live):</b> Ravi: “kyunki yesterday khatam ho gaya, isliye simple past aayega” →
+<code>{"verdict":"correct","feedback":"Sahi! You noticed that yesterday is a finished time, so we use the simple past …"}</code></p>
+<p><b>Checks:</b> verdict must be one of the 4 labels; feedback &gt; 300 characters is cut; empty answers are handled
+before any AI call. <b>Fallback:</b> the rule-based <code>ruleCheck()</code> (word-boundary patterns: “is/am …ing” → M2,
+“have … means past” → M1, unless the learner rejects that form; marker or finished/now words → correct) with
+teacher-written feedback, labelled “Offline feedback”. <b>Not AI:</b> MCQ/fill/fix grading (<code>classify()</code> grades
+the tense of the key verb), the decision rule, and all Hindi text. The API key is a Vercel environment variable only.</p>
+
+<h2>D7 – Pedagogical rationale</h2>
+<p><b>Design challenge — decision rule</b> (<code>decide()</code> in <code>lib/engine.js</code>), shown to the learner as a grey line on every feedback screen:</p>
+<table>
+  <tr><th>Learner response</th><th>Next step</th></tr>
+  <tr><td>correct, no hint, ≤ 45 s</td><td><b>harder question</b> (level +1)</td></tr>
+  <tr><td>correct but hint used or &gt; 45 s</td><td>same level, new question (right but not yet secure)</td></tr>
+  <tr><td>first M1/M2/M3, or another error</td><td><b>alternative explanation</b>: timeline “Is the time finished?” / “Does it reach NOW?” + the corrected sentence, then a similar item</td></tr>
+  <tr><td>the same misconception twice</td><td><b>prerequisite instruction</b>: sort 6 time words into Finished / Connected to now, then level −1</td></tr>
+</table>
+<ul>
+  <li><b>L8 shaped the feedback:</b> errors come from Hindi patterns, so feedback names the time word and, for M1, contrasts Hindi “kal gaya hoon” with English; a Learn card shows both Hindi patterns side by side; a “Hindi mein samjhao” toggle switches every rule line to Roman-script Hindi and is saved in the profile.</li>
+  <li><b>Scaffolding:</b> idea cards (pre-training with timelines; Mayer’s signalling via colour chips: amber = finished, indigo = connected to now) → recognition (MCQ) → production (fill, fix) → explanation (Bloom: understand → apply → analyse); a hint names the time word without giving the answer.</li>
+  <li><b>Adaptivity on 3 axes:</b> performance (verdict), misconception history (twice → prerequisite) and interaction (hint use, response time); misconception practice from the Mistakes notebook.</li>
+  <li><b>C3 shaped the layout:</b> one question per screen, 360 px column, all actions in the thumb zone, ≥ 48 px targets, tab bar hidden during questions to keep focus, left-handed mode.</li>
+  <li><b>Affect:</b> “Sahi!” / “Achha try!”, ↺ instead of a red cross, a progress bar and a summary that names what to practise.</li>
+  <li><b>AI judgement:</b> the AI never decides the next step; it returns a label from a fixed set, every AI question is rule-checked, and the teacher-written bank is always available.</li>
+</ul>
+
+<h2>D8 – Evaluation plan</h2>
+<table>
+  <tr><th>Outcome</th><th>Assessment</th><th>Success</th></tr>
+  <tr><td>LO1 classify time words</td><td>Time-word game: 10 words, every pick logged</td><td>≥ 8/10 on the first game</td></tr>
+  <tr><td>LO2 choose/produce the form</td><td>Pre-test vs post-test, 5 mixed items each (same rules, new sentences)</td><td>mean gain ≥ 2 items; ≥ 60% of learners ≥ 4/5</td></tr>
+  <tr><td>LO3 explain</td><td>Rubric on explain items: 0 = no reason, 1 = names the tense, 2 = refers to the time word / connected to now</td><td>≥ 60% score 2 by the end</td></tr>
+</table>
+<p><b>Log data</b> (per answer, in localStorage; a study would send it to a database): question id, rule, level, format,
+response, verdict (correct/M1/M2/M3/other), adaptive action, hint used, time taken, language (en/hi), AI vs offline
+source; events for language and setting changes, hints and game results. <b>Analysis:</b> M1/M2 rate across the
+session (should fall), how often the prerequisite branch fires, accuracy on the item after an alternative explanation,
+and whether Hindi feedback users improve faster. A short think-aloud with 3–5 Class 8 learners in this context would
+check whether the Hindi contrast card helps.</p>
+
+<h2>AI-use log and reflection</h2>
+<p><b>Tool used:</b> Claude Code (Claude Opus 5.5) in the Claude desktop app — one session, in order: choosing the
+card (P4-T7-L8-C3), DESIGN.md, code, deployment, live testing, the persona revision, the grading/demo/hint/UI passes and
+this report. Export of the chat: <b>session-export-1795011343647.zip</b> (full transcript, submitted on Moodle with this report). In-app AI: Claude <code>claude-haiku-5-5</code>.</p>
+<ul>
+  <li><b>Checking the AI, not trusting it:</b> live testing showed every explanation silently falling back to offline — the model hit <code>max_tokens</code>; fixed by raising the limit and logging the stop reason.</li>
+  <li>The offline fallback marked “is …ing” explanations correct and flagged forms the learner was rejecting (“am living is wrong”); rewritten as <code>ruleCheck()</code> with word boundaries and 6 tests.</li>
+  <li>Exact-match grading marked “I saw the film last Sunday” wrong; grading now checks the tense of the key verb (21 tests), and an AI answer “has been living” led to accepting any present-perfect form.</li>
+  <li>I revised the persona during the exam (Hindi home language, English-medium school) because it fits L8 better; the misconceptions stayed the same.</li>
+  <li>An AI-written commit briefly broke the answer-trimming regex (removed the last letter of answers); it was caught by checking the output and fixed two minutes later, before any deployment.</li>
+  <li>Design decision kept with me: the AI only labels and generates; the adaptive rule is deterministic code that I can explain and change.</li>
+</ul>
+</body>
+</html>

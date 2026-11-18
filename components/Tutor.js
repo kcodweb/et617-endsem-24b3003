@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BANK, byId } from "@/lib/bank";
-import { classifyDetail, decide, nextLevel, FEEDBACK, HINT } from "@/lib/engine";
+import { classifyDetail, decide, nextLevel, targetVerb, FEEDBACK, HINT } from "@/lib/engine";
 import { ruleCheck, explainFeedback } from "@/lib/rules";
 
 const ROLL = "24B3003";
@@ -94,6 +94,66 @@ function Timeline({ rule }) {
         </>
       )}
     </svg>
+  );
+}
+
+// ---------- sentences with highlighted time words ----------
+// Colour meaning everywhere: amber = finished time / simple past, indigo = connected to now / present perfect.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The time words of an item and the rule each one signals (multi-part items have one per blank/sentence).
+function markersOf(q) {
+  if (q.parts) return targetVerb(q).map((p) => ({ marker: p.marker, rule: p.rule }));
+  return [{ marker: q.marker, rule: q.rule }];
+}
+
+function Chip({ rule, children }) {
+  return (
+    <span className={`inline-block rounded-md px-1.5 font-bold ${rule === "past" ? "bg-amber-200 text-amber-950" : "bg-indigo-100 text-indigo-900"}`}>
+      {children}
+    </span>
+  );
+}
+
+// Renders text with each time word as a chip and each ___ as a visible underlined slot
+// (or, when `fills` is given, with the correct words written into the slots).
+function Sentence({ text, markers = [], fills }) {
+  const ms = markers.filter((m) => m.marker);
+  const alts = ["___", ...ms.map((m) => escapeRe(m.marker))].join("|");
+  let slot = 0;
+  return (
+    <>
+      {text.split(new RegExp(`(${alts})`, "gi")).map((seg, i) => {
+        if (seg === "___") {
+          const f = fills?.[slot++];
+          return f
+            ? <b key={i} className="text-green-800">{f}</b>
+            : <span key={i} role="img" aria-label="blank" className="inline-block w-14 mx-1 border-b-[3px] border-slate-700 align-baseline">&nbsp;</span>;
+        }
+        const m = ms.find((x) => x.marker.toLowerCase() === seg.toLowerCase());
+        return m ? <Chip key={i} rule={m.rule}>{seg}</Chip> : <span key={i}>{seg}</span>;
+      })}
+    </>
+  );
+}
+
+// The full correct sentence: blanks filled with the answer (fill/mcq), or the corrected sentence (fix).
+function CorrectSentence({ q }) {
+  if (q.format === "explain") return null;
+  if (q.format === "fix") return <Sentence text={q.answer} markers={markersOf(q)} />;
+  if (!q.prompt.includes("___")) return null;
+  const text = q.prompt.replace(/\s*\(\w+\)/g, ""); // drop the "(live)" base-verb cue
+  return <Sentence text={text} markers={markersOf(q)} fills={q.answer.split("…").map((s) => s.trim())} />;
+}
+
+// MCQ option with a letter badge (A, B, C), equal spacing and a pressed state.
+function Option({ letter, children, onClick }) {
+  return (
+    <button onClick={onClick}
+      className="w-full min-h-[56px] rounded-xl border-2 border-indigo-300 bg-white px-3 flex items-center gap-3 text-left text-lg font-semibold active:bg-indigo-100 active:border-indigo-600 active:scale-[0.98]">
+      <span className="shrink-0 w-8 h-8 rounded-full bg-indigo-700 text-white grid place-items-center text-base">{letter}</span>
+      <span>{children}</span>
+    </button>
   );
 }
 
@@ -226,7 +286,9 @@ export default function Tutor() {
     } else {
       const d = classifyDetail(q, answer);
       verdict = d.verdict;
-      fq = { ...q, marker: d.marker };
+      // Feedback is about the part the learner got wrong: its time word and the rule it signals.
+      const partRule = markersOf(q).find((m) => m.marker === d.marker)?.rule || q.rule;
+      fq = { ...q, marker: d.marker, rule: partRule };
       feedback = FEEDBACK[verdict].en(fq);
     }
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
@@ -318,21 +380,28 @@ export default function Tutor() {
       <Shell onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
     );
     const label = { mcq: "Choose the correct option", fill: "Fill in the blank", fix: "Find and fix the mistake", explain: "Explain in your own words" }[q.format];
+    const source = demo ? "Demo mode · seed questions" : q.source === "ai" ? "AI-generated" : q.source === "offline" ? "Offline (AI unavailable)" : "Teacher-written";
     return (
       <Shell onAbout={about} step={step}>
-        <p className="text-sm font-semibold text-indigo-800 uppercase">{label}</p>
-        {demo && <p className="text-xs text-slate-500">Demo mode · seed questions</p>}
-        <p className="text-xs text-slate-600 mb-2">{q.source === "ai" ? "AI-generated question" : q.source === "offline" ? "Offline question (AI unavailable)" : "Teacher-written question"}</p>
-        <p className="text-2xl font-medium leading-snug">{q.prompt}</p>
-        {hintUsed && (
-          <p className="mt-3 p-3 rounded-lg bg-yellow-50 border border-yellow-400 text-lg" lang={hindi ? "hi-Latn" : "en"}>
-            💡 {hindi ? HINT.hi(q) : HINT.en(q)}
-          </p>
-        )}
+        <div className="q-card rounded-2xl bg-white border border-slate-200 p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-sm font-semibold text-indigo-800 uppercase">{label}</p>
+            <span className="shrink-0 rounded-full bg-slate-100 text-slate-700 text-[13px] px-2 py-0.5">{source}</span>
+          </div>
+          <p className="text-2xl font-medium leading-snug"><Sentence text={q.prompt} markers={markersOf(q)} /></p>
+          {hintUsed ? (
+            <p className="mt-3 p-3 rounded-lg bg-indigo-50 text-indigo-950 text-lg" lang={hindi ? "hi-Latn" : "en"}>
+              💡 <Sentence text={hindi ? HINT.hi(q) : HINT.en(q)} markers={[{ marker: q.marker, rule: q.rule }]} />
+            </p>
+          ) : (
+            <button onClick={showHint} className="mt-2 min-h-[48px] px-2 -ml-2 rounded-lg text-indigo-800 font-semibold active:bg-indigo-50">
+              💡 Need a hint?
+            </button>
+          )}
+        </div>
         <Actions>
-          <Big kind="secondary" onClick={showHint} disabled={hintUsed}>{hintUsed ? "💡 Hint shown" : "💡 Hint"}</Big>
           {q.format === "mcq" ? (
-            q.options.map((o) => <Big key={o} kind="option" onClick={() => check(o)}>{o}</Big>)
+            q.options.map((o, i) => <Option key={o} letter={"ABC"[i]} onClick={() => check(o)}>{o}</Option>)
           ) : (
             <>
               {/* Input and Check sit together in normal flow (no fixed positioning), so when the on-screen
@@ -356,18 +425,37 @@ export default function Tutor() {
   if (screen === "feedback") {
     const good = result.verdict === "correct";
     const nextText = { harder: "Next: a harder question ⬆", same: "Next: one more at this level", alternative: "Next: see it on a timeline", prerequisite: "Next: a short lesson on time words" }[result.action];
-    const tag = { correct: "Correct", M1: "Common mix-up: “have + V3” with a finished time", M2: "Common mix-up: “am …ing” with since/for", M3: "Common mix-up: “did” with ever/already/just", other: "Not quite" }[result.verdict];
+    const mixup = { M1: "“have + V3” with a finished time", M2: "“am …ing” with since/for", M3: "“did” with ever/already/just" }[result.verdict];
+    const fq = result.fq;
+    const explain = fq.format === "explain";
+    const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
     return (
       <Shell onAbout={about} step={step}>
-        <div className={`rounded-xl p-4 border-2 ${good ? "bg-green-50 border-green-600" : "bg-orange-50 border-orange-500"}`}>
-          <p className="text-xl font-bold">{good ? "✓ " : "↺ "}{tag}</p>
-          <p className="mt-2 text-sm text-slate-700">Your answer: “{last?.response}”</p>
-          <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>{hindi ? FEEDBACK[result.verdict].hi(result.fq) : result.feedback}</p>
-          {hindi
-            ? <p className="mt-2 text-xs text-slate-600">Hindi explanation (teacher-written)</p>
-            : result.source !== "rule" && <p className="mt-2 text-xs text-slate-600">{result.source === "ai" ? "Feedback by AI tutor" : "Offline feedback (AI unavailable)"}</p>}
+        {/* 1. Status line */}
+        <div className={`rounded-xl px-4 py-3 ${good ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
+          <p className="text-2xl font-bold">{good ? "✓ Sahi!" : mixup ? "↺ Common mix-up" : "↺ Not quite"}</p>
+          {mixup && <p className="text-base">{mixup}</p>}
         </div>
-        <p className="mt-2 text-sm text-slate-500">{decisionLine(result, demo)}</p>
+
+        {/* 2. Answer comparison + the full correct sentence */}
+        <div className="mt-3 rounded-xl bg-white border border-slate-200 p-4 space-y-1">
+          <p className="text-base text-slate-700">Your answer:{" "}
+            {good || explain
+              ? <span className={good ? "font-semibold text-green-800" : "text-slate-900"}>{last?.response}</span>
+              : <s className="font-semibold text-red-700 decoration-2">{last?.response}</s>}
+          </p>
+          {!good && <p className="text-base text-slate-700">{explain ? "Model answer:" : "Correct:"} <span className="font-semibold text-green-800">{fq.answer}</span></p>}
+          {!explain && <p className="pt-2 text-xl leading-snug"><CorrectSentence q={fq} /></p>}
+        </div>
+
+        {/* 3. One short rule line */}
+        <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>
+          <Sentence text={ruleLine} markers={[{ marker: fq.marker, rule: fq.rule }]} />
+        </p>
+        <p className="mt-1 text-sm text-slate-600">
+          {hindi ? "Hindi explanation (teacher-written)" : result.source === "ai" ? "Feedback by AI tutor" : result.source === "offline" ? "Offline feedback (AI unavailable)" : ""}
+        </p>
+        <p className="mt-1 text-sm text-slate-600">{decisionLine(result, demo)}</p>
         <Actions>
           <button role="switch" aria-checked={hindi} onClick={toggleHindi}
             className="w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white active:bg-amber-100 px-4 flex items-center justify-between text-lg font-semibold">

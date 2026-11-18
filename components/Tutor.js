@@ -184,7 +184,8 @@ export default function Tutor() {
     <Shell onAbout={about}>
       <h1 className="text-2xl font-bold mb-2">About</h1>
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
-      <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium · C3 mobile-first, one-handed</p>
+      <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
+      <p className="mb-2">Explanations in Hindi because it is Ravi's home language; the questions are in English, his school medium.</p>
       <p className="mb-2"><b>How it adapts:</b> correct → harder question; first mistake → timeline explanation; the same misconception twice → mini-lesson on time words, then an easier level.</p>
       <p className="mb-2"><b>AI:</b> Claude generates new questions and checks your “explain why” answers. Every AI question is checked by rules before you see it. If the AI is slow or fails, an “Offline question” from the teacher-written bank is shown instead.</p>
       <p className="mb-2 text-sm text-slate-600">Answers logged on this phone: {history.length}</p>

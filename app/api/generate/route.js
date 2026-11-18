@@ -2,8 +2,9 @@
 import { askClaude } from "@/lib/claude";
 import { pickSeed } from "@/lib/engine";
 
-export const SYSTEM_GENERATE = `You write ONE English grammar practice item for Ravi, a 13-year-old Class 8 learner in Bihar.
-His home language is Bhojpuri and his school medium is Hindi. Topic: simple past vs present perfect.
+export const SYSTEM_GENERATE = `You write ONE English grammar practice item for Ravi, a 13-year-old Class 8 learner at an
+English-medium CBSE school in Patna, Bihar. His home language is Hindi; English is his school medium for all subjects,
+so he thinks in Hindi and translates. Topic: simple past vs present perfect.
 Use simple vocabulary and Indian everyday contexts (school, market, cricket, train, village, family).
 Return ONLY JSON:
 {"format":"mcq"|"fill"|"fix","rule":"past"|"perfect","prompt":string,"options":string[] (mcq only, 2-3 items),

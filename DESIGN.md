@@ -14,13 +14,16 @@ App name: **"Kal ya Abhi?"** ("Yesterday or Now?") — a tense tutor.
 ---
 
 ## D1 – Educational problem
-Ravi studies English as a subject in a Hindi-medium school but speaks Bhojpuri at home. When he writes in English he
-translates from Hindi/Bhojpuri, where "maine khana khaya hai" and "main kal gaya hoon" freely mix a perfect-looking
-form with finished-time words. So he writes *"I have gone to the market yesterday"* and *"I am living here since 2020"*.
-Textbook exercises mark him wrong but never tell him *which rule* he broke, so the error keeps coming back.
-He needs a short, phone-based tutor that notices *his* specific error pattern and adapts the next task.
+Ravi studies in an English-medium CBSE school in Patna, but Hindi is his home language. Every subject is taught and
+examined in English, so he writes all his answers in English while thinking in Hindi and translating. Hindi freely
+combines a perfect-looking form with a finished-time word ("main kal gaya hoon") and a continuous form with "since"
+("main 2020 se yahaan reh raha hoon"), so he writes *"I have gone to the market yesterday"* and *"I am living here since
+2020"*. Teachers mark him wrong but never tell him *which rule* he broke, so the error keeps coming back, and it costs
+him marks in science and social science answers too, not only in English. He needs a short phone tutor that notices
+*his* specific error pattern and adapts the next task.
 
-**Context of use:** at home, evening, ~20 minutes, on his father's budget Android phone, held in one hand.
+**Context of use:** at home in the evening after homework, ~20 minutes, on his father's budget Android phone, held in
+one hand.
 
 **Learning outcomes** — by the end, the learner will be able to:
 1. **Identify** whether a time expression (*yesterday, last year, in 2019* vs *since, for, ever, already, just, yet*)
@@ -31,8 +34,10 @@ He needs a short, phone-based tutor that notices *his* specific error pattern an
    "connected to now" meaning.
 
 ## D2 – Learner persona
-- **Name / age:** Ravi Kumar, 13, Class 8, Hindi-medium government school, small town near Ara (Bihar).
-- **Home language:** Bhojpuri; school medium: Hindi; English is a subject.
+- **Name / age:** Ravi Kumar, 13, Class 8, English-medium CBSE school in Patna (Bihar).
+- **Home language:** Hindi (spoken with family and friends); **school medium:** English for all subjects.
+- **Why this matters:** he thinks in Hindi and translates into English, so tense errors from Hindi patterns appear in
+  every written answer and cost him marks in every subject, not just English.
 - **Prior knowledge:** knows the verb forms (go / went / gone) from the textbook table; knows simple present and
   present continuous; has not yet understood the *meaning* difference between simple past and present perfect.
 - **Misconception M1 — perfect with finished time:** uses the present perfect with a finished-time word,
@@ -40,7 +45,7 @@ He needs a short, phone-based tutor that notices *his* specific error pattern an
 - **Misconception M2 — continuous/present for "since/for":** uses the present continuous or simple present with
   *since/for* (a common Indian-English pattern, from "main 2020 se yahaan reh raha hoon") → *"I am living here since 2020."*
 - **Device / time:** father's Android phone (360 px wide), 20 minutes after dinner, often one hand free.
-- **Motivation:** wants to write correct English answers in exams and not be laughed at when speaking;
+- **Motivation:** wants to stop losing marks for grammar in his exam answers and not be laughed at when speaking;
   likes quick wins and gets discouraged by red crosses without explanation.
 
 ## D3 – Educational content (plan)
@@ -104,3 +109,10 @@ After each answer the tutor classifies the response as `correct`, `M1`, `M2` or 
 ## Stack
 Next.js (App Router) + Tailwind on Vercel; Anthropic Claude via a server API route (key in a Vercel env var);
 progress in localStorage. Starter: `create-next-app` (named in the report).
+
+## Revision note
+The persona was revised during the exam. Ravi was first written as a Bhojpuri speaker in a Hindi-medium school;
+he is now a Hindi speaker in an English-medium CBSE school in Patna. The new version is a clearer fit for L8: his
+home language (Hindi) differs from his school medium (English), and because English is used in every subject, his
+tense errors cost him marks across all subjects. It also makes the Hindi bridge lines and the Hindi feedback a direct
+match for his home language. The two misconceptions (M1, M2) did not change, because both come from Hindi patterns.

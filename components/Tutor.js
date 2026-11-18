@@ -14,9 +14,10 @@ const DEMO_ORDER = ["q1", "q2", "q6", "q4", "q3", "q7", "q5", "q9"];
 // ---------- small UI pieces ----------
 // C3: the whole app (header, main, footer) is one 360px phone-width column. On wider screens it gets a
 // border and shadow on a neutral background, so it looks like a phone on a laptop too.
-function Shell({ children, onAbout, step, prog, screenKey }) {
+function Shell({ children, onAbout, step, prog, screenKey, tab, onTab, settings = {} }) {
   return (
-    <div className="phone w-full max-w-[360px] mx-auto min-h-dvh flex flex-col bg-amber-50 text-slate-900">
+    <div className="phone w-full max-w-[360px] mx-auto min-h-dvh flex flex-col bg-amber-50 text-slate-900"
+      data-size={settings.textSize || "normal"} data-hand={settings.leftHanded ? "left" : "right"}>
       <header className="bg-white border-b border-amber-200">
         <div className="flex items-center justify-between px-4 py-3">
           <span className="font-bold text-lg">Kal ya Abhi?</span>
@@ -26,11 +27,34 @@ function Shell({ children, onAbout, step, prog, screenKey }) {
       </header>
       {/* key = screen: a new screen remounts <main>, which plays the short CSS fade/slide-in. */}
       <main key={screenKey} className="screen-in flex-1 flex flex-col w-full px-4 py-4">{children}</main>
-      <footer className="flex items-center justify-center text-sm text-slate-600 border-t border-amber-200 bg-white">
-        <span>ET 617 · ID {ROLL} ·</span>
-        <button onClick={onAbout} className="min-h-[48px] px-4 underline active:bg-amber-100">About</button>
-      </footer>
+      {/* Bottom block stays in view: the tab bar (thumb zone, hidden during a question) + the identity footer. */}
+      <div className="sticky bottom-0 z-10">
+        {tab && <TabBar active={tab} onTab={onTab} />}
+        <footer className="flex items-center justify-center text-sm text-slate-600 border-t border-amber-200 bg-white">
+          <span>ET 617 · ID {ROLL} ·</span>
+          <button onClick={onAbout} className="min-h-[48px] px-4 underline active:bg-amber-100">About</button>
+        </footer>
+      </div>
     </div>
+  );
+}
+
+const TABS = [
+  ["home", "🏠", "Home"], ["learn", "📘", "Learn"], ["practice", "✏️", "Practice"], ["mistakes", "📒", "Mistakes"], ["me", "👤", "Me"],
+];
+
+function TabBar({ active, onTab }) {
+  return (
+    <nav className="grid grid-cols-5 bg-white border-t border-slate-200" aria-label="Sections">
+      {TABS.map(([id, icon, label]) => (
+        <button key={id} onClick={() => onTab(id)} aria-current={active === id ? "page" : undefined}
+          className={`min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[13px] active:bg-indigo-100 ${
+            active === id ? "text-indigo-800 font-bold bg-indigo-50 shadow-[inset_0_3px_0_#4338ca]" : "text-slate-700"}`}>
+          <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
+          {label}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -381,9 +405,22 @@ export default function Tutor() {
     : null;
   const screenKey = screen === "practice" ? `practice-${q?.id}` : screen;
 
+  // Bottom tabs. The tab bar is hidden inside the practice loop (question, feedback, timeline, mini-lesson)
+  // so the learner stays focused, and shown again on the summary.
+  const TAB_OF = { welcome: "home", home: "home", learn: "learn", concept: "learn", summary: "practice",
+    mistakes: "mistakes", me: "me", about: "me" };
+  const tab = TAB_OF[screen] || null;
+  function goTab(t) {
+    if (t === "home") setScreen("welcome");
+    else if (t === "learn") { setCard(0); setScreen("concept"); }
+    else if (t === "practice") start();
+    else if (t === "mistakes") setScreen("mistakes");
+    else if (t === "me") about();
+  }
+
   // ---------- screens ----------
   if (screen === "about") return (
-    <Shell prog={prog} screenKey={screenKey} onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
       <h1 className="text-2xl font-bold mb-2">About</h1>
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
       <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
@@ -404,7 +441,7 @@ export default function Tutor() {
   );
 
   if (screen === "welcome") return (
-    <Shell prog={prog} screenKey={screenKey} onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about}>
       <h1 className="text-3xl font-bold mt-2">Kal ya Abhi?</h1>
       <p className="text-lg mt-1">Yesterday or now? Learn when to say <b>“I went”</b> and when to say <b>“I have gone”</b>.</p>
       <MiniTimelines />
@@ -432,7 +469,7 @@ export default function Tutor() {
     ];
     const c = cards[card];
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={`Idea ${card + 1}/2`}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={`Idea ${card + 1}/2`}>
         <h2 className="text-2xl font-bold">{c.title}</h2>
         <Timeline rule={c.rule} />
         <p className="text-lg">{c.body}</p>
@@ -448,12 +485,12 @@ export default function Tutor() {
 
   if (screen === "practice") {
     if (loading || !q) return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
     );
     const label = { mcq: "Choose the correct option", fill: "Fill in the blank", fix: "Find and fix the mistake", explain: "Explain in your own words" }[q.format];
     const source = demo ? "Demo mode · seed questions" : q.source === "ai" ? "AI-generated" : q.source === "offline" ? "Offline (AI unavailable)" : "Teacher-written";
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}>
         {/* The question card is vertically centred in the space above the answers. */}
         <div className="flex-1 flex flex-col justify-center">
         <div className="q-card rounded-2xl bg-white border border-slate-200 shadow-[0_4px_20px_rgba(15,23,42,0.08)] p-4">
@@ -504,7 +541,7 @@ export default function Tutor() {
     const explain = fq.format === "explain";
     const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step={step}>
         {/* 1. Status line */}
         <div className={`rounded-xl px-4 py-3 ${good ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
           <p className="text-2xl font-bold">{good ? "✓ Sahi!" : mixup ? "↺ Common mix-up" : "↺ Not quite"}</p>
@@ -548,7 +585,7 @@ export default function Tutor() {
     const fq = result?.fq || q; // the item just answered, with the time word of the part that was wrong
     const rule = fq?.rule || last?.rule || "past";
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Another way to see it">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Another way to see it">
         <h2 className="text-2xl font-bold">{rule === "past" ? "Is the time finished?" : "Does it reach NOW?"}</h2>
         <Timeline rule={rule} />
         <p className="text-lg">
@@ -575,7 +612,7 @@ export default function Tutor() {
     const done = words.every(([w]) => sorted[w]);
     const allRight = words.every(([w, r]) => sorted[w] === r);
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Mini-lesson: time words">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Mini-lesson: time words">
         <h2 className="text-xl font-bold">You made the same mix-up twice. Let’s fix the root: time words.</h2>
         <p className="mt-1 text-base">Tap where each word belongs.</p>
         <div className="mt-3 space-y-2">
@@ -600,6 +637,16 @@ export default function Tutor() {
     );
   }
 
+  if (screen === "mistakes") {
+    const wrong = history.filter((h) => h.verdict !== "correct");
+    return (
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Mistakes">
+        <h2 className="text-2xl font-bold">My mistake notebook</h2>
+        <p className="mt-2">{wrong.length ? `${wrong.length} answers to look at again.` : "No mistakes yet — great!"}</p>
+      </Shell>
+    );
+  }
+
   if (screen === "summary") {
     const correct = session.filter((h) => h.verdict === "correct").length;
     const m1 = session.filter((h) => h.verdict === "M1").length;
@@ -610,7 +657,7 @@ export default function Tutor() {
       return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
     };
     return (
-      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Your progress">
+      <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onAbout={about} step="Your progress">
         <h2 className="text-2xl font-bold text-center">Well done, you finished!</h2>
         <ScoreCircle correct={correct} total={session.length} />
         <p className="text-center text-base text-slate-700">reached level {level}</p>

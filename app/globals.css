@@ -1,10 +1,6 @@
 @import "tailwindcss";
 
-/* Body text at least 17px (rem-based sizes scale with this; text-sm is then ~15px, used for small labels). */
-html {
-  font-size: 17px;
-}
-
+/* Default 16px base. Body text is text-base, small labels text-sm; tap targets get their 48px from min-height. */
 body {
   background: #fffbeb;
   color: #0f172a;
@@ -24,26 +20,18 @@ body {
   }
 }
 
-/* Me → Text size: Large scales the question and feedback text. */
+/* Me → Text size: Large scales the question (text-xl → text-2xl) and the feedback text. */
 .phone[data-size="large"] .qtext {
-  font-size: 1.9rem;
-  line-height: 1.3;
+  font-size: 1.5rem;
+  line-height: 2rem;
 }
 .phone[data-size="large"] .ftext {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
 }
 
-/* C3, either hand: the answer area sits towards the thumb (right by default, left in left-handed mode),
-   and the hint button sits on the same side. */
-.actions > * {
-  width: 92%;
-}
-.phone[data-hand="right"] .actions {
-  align-items: flex-end;
-}
-.phone[data-hand="left"] .actions {
-  align-items: flex-start;
-}
+/* C3, either hand: buttons stay full width. Left-handed mode mirrors only the hint button's side and the
+   switch rows (the switch moves to the left, next to the left thumb). */
 .hint-btn {
   display: block;
 }
@@ -53,6 +41,9 @@ body {
 }
 .phone[data-hand="left"] .hint-btn {
   margin-left: -0.5rem;
+}
+.phone[data-hand="left"] .hand-row {
+  flex-direction: row-reverse;
 }
 
 /* A short fade + slide when a new screen appears. */

@@ -211,7 +211,7 @@ check whether the Hindi contrast card helps.</p>
 <p><b>AI chats, in the order used</b> (exports submitted on Moodle with this report):</p>
 <ol>
   <li><b>Claude chat on claude.ai</b> — read the exam brief, chose and checked the card, reviewed the repository after
-    each push, tested the app at 360 px, and wrote the prompts I gave to Claude Code. Export: <b>Claude-session.pdf</b>.</li>
+    each push, tested the app at 360 px, and wrote the prompts I gave to Claude Code. Export: <b>Claude-session.txt</b>.</li>
   <li><b>Claude Code session</b> (Claude Opus 5.5, Claude desktop app) — code, deployment to Vercel, live testing and
     this report. Export: <b>session-export-1795011343647.zip</b>.</li>
   <li><b>In-app AI</b> — Claude <code>claude-haiku-5-5</code> via the Anthropic API: question generation and explanation
@@ -228,9 +228,10 @@ check whether the Hindi contrast card helps.</p>
 </ul>
 <h3>My reflection (in my own words)</h3>
 <ul>
-  <li>&nbsp;</li>
-  <li>&nbsp;</li>
-  <li>&nbsp;</li>
+  <li><b>Questioning the persona.</b> My first persona was Bhojpuri at home and a Hindi-medium school. While building it, I asked myself why Ravi would need English tense help if his school is in Hindi, and why the app explains in Hindi if Hindi isn’t his home language. So I changed the persona to Hindi at home and an English-medium school. That fits L8 better, and it made the “Hindi mein samjhao” toggle real home-language support. The misconceptions stayed the same because they come from Hindi either way. I learned that a persona has to stay consistent with every design choice, not just sound realistic.</li>
+  <li><b>Not trusting the AI’s output.</b> The AI wrote most of the code quickly, but testing found real mistakes. “I saw the film last Sunday” was marked wrong because of one word. An explanation saying “am living is wrong” was flagged as the misconception. Explanations silently fell back to offline mode because of a token limit. None of these would have shown up if I had only checked whether the app ran. So I added test cases for the grading and walked through both learner paths myself.</li>
+  <li><b>Keeping the decision rule in my hands.</b> I chose to let the AI only generate questions and label answers from a fixed set (correct/M1/M2/M3/other). The decision about what comes next (harder, same level, timeline, mini-lesson) is simple code I can explain and change. I think that matters for Ravi: if the AI decided the next step, I couldn’t guarantee he gets the prerequisite lesson after repeating the same mistake.</li>
+  <li><b>Judging the app as a learner would.</b> The first versions worked but felt wrong: the questions were too basic, the text was too big, and “Practice” opened the Learn cards first. Using it at phone width helped me see it the way Ravi would. So I added harder level-3 items and fixed the layout and navigation. Next time I would test on a real phone earlier, instead of fixing the UI at the end.</li>
 </ul>
 </body>
 </html>

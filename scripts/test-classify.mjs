@@ -33,20 +33,16 @@ const extra = [
   [ai, "My uncle is living in Patna since 2015.", "M2"],
 ];
 
-let failed = 0;
-for (const [q, response, expected] of extra) {
+// Every case as [item, response, expected]; a missing bank id is a failure, not a silent skip.
+const all = [...cases.map(([id, r, e]) => [byId(id) || { id, missing: true }, r, e]), ...extra];
+
+let passed = 0, failed = 0;
+for (const [q, response, expected] of all) {
+  if (q.missing) { failed++; console.log(`FAIL  ${q.id} not in bank`); continue; }
   const got = classify(q, response);
   const ok = got === expected;
-  if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ai   ${got.padEnd(7)} (expected ${expected.padEnd(7)})  "${response}"`);
+  ok ? passed++ : failed++;
+  console.log(`${ok ? "PASS" : "FAIL"}  ${q.id.padEnd(4)} ${got.padEnd(7)} (expected ${expected.padEnd(7)})  "${response}"`);
 }
-for (const [id, response, expected] of cases) {
-  const q = byId(id);
-  if (!q) { console.log(`SKIP  ${id} not in bank`); continue; }
-  const got = classify(q, response);
-  const ok = got === expected;
-  if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${id.padEnd(4)} ${got.padEnd(7)} (expected ${expected.padEnd(7)})  "${response}"`);
-}
-console.log(failed ? `\n${failed} failed` : `\nAll ${cases.length} passed`);
+console.log(`\n${passed} passed, ${failed} failed (${all.length} cases)`);
 process.exit(failed ? 1 : 0);

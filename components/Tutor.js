@@ -35,6 +35,19 @@ function Actions({ children }) {
   return <div className="mt-auto pt-4 flex flex-col gap-3">{children}</div>;
 }
 
+// One grey line on the feedback screen that explains why the tutor chose the next step (makes the rule visible).
+function decisionLine({ action, hintUsed, timeTakenMs, verdict }, demo) {
+  const secs = Math.round(timeTakenMs / 1000);
+  const time = demo ? `You took ${secs} s (time not used in demo mode)` : `You took ${secs} s`;
+  if (action === "harder") return `${time} · no hint → harder question`;
+  if (action === "same")
+    return hintUsed ? "Hint used → one more at this level" : `${time} (over 45 s) → one more at this level`;
+  if (action === "prerequisite") return "Same mix-up twice → mini-lesson on time words, then one level easier";
+  return ["M1", "M2", "M3"].includes(verdict)
+    ? "First time with this mix-up → see it on a timeline, then a similar question"
+    : "Mistake → see it on a timeline, then a similar question";
+}
+
 // When the keyboard opens, scroll so the Check button (just below the input) is in view.
 function keepCheckVisible() {
   setTimeout(() => document.getElementById("check-btn")?.scrollIntoView({ block: "end", behavior: "smooth" }), 300);
@@ -219,10 +232,12 @@ export default function Tutor() {
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
       response: answer, verdict, lang: hindi ? "hi" : "en", hintUsed, timeTakenMs, t: Date.now() };
     const newSession = [...session, entry];
-    const action = decide(verdict, newSession, { hintUsed, timeTakenMs });
+    // Demo mode ignores response time (only the hint counts), so a walkthrough is reproducible while presenting.
+    // The real time is still logged in the entry.
+    const action = decide(verdict, newSession, { hintUsed, timeTakenMs: demo ? 0 : timeTakenMs });
     entry.action = action;
     setHistory((h) => [...h, entry]);
-    setResult({ verdict, feedback, action, source, fq });
+    setResult({ verdict, feedback, action, source, fq, hintUsed, timeTakenMs });
     setScreen("feedback");
   }
 
@@ -352,6 +367,7 @@ export default function Tutor() {
             ? <p className="mt-2 text-xs text-slate-600">Hindi explanation (teacher-written)</p>
             : result.source !== "rule" && <p className="mt-2 text-xs text-slate-600">{result.source === "ai" ? "Feedback by AI tutor" : "Offline feedback (AI unavailable)"}</p>}
         </div>
+        <p className="mt-2 text-sm text-slate-500">{decisionLine(result, demo)}</p>
         <Actions>
           <button role="switch" aria-checked={hindi} onClick={toggleHindi}
             className="w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white active:bg-amber-100 px-4 flex items-center justify-between text-lg font-semibold">

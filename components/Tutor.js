@@ -277,6 +277,20 @@ const LEARN_CARDS = [
     hindi: "Hindi ka pattern seedha translate mat karo. Pehle time word dekho: khatam ho gaya → simple past; ab tak → have/has + V3." },
 ];
 
+// ---------- Time-word game (LO1 assessment) ----------
+const GAME_WORDS = [
+  ["yesterday", "past", "Yesterday is over — a finished time."],
+  ["since 2020", "perfect", "From 2020 until now — it reaches NOW."],
+  ["last year", "past", "Last year is over — a finished time."],
+  ["already", "perfect", "The result is here now."],
+  ["two days ago", "past", "“Ago” points to a finished moment."],
+  ["ever", "perfect", "In your whole life up to now."],
+  ["in 2019", "past", "2019 is a finished year."],
+  ["for five years", "perfect", "A period that runs up to now."],
+  ["just", "perfect", "A moment ago, and the result is now."],
+  ["last Sunday", "past", "Last Sunday is over — a finished time."],
+];
+
 // ---------- the tutor ----------
 export default function Tutor() {
   const [screen, setScreen] = useState("home");
@@ -285,6 +299,7 @@ export default function Tutor() {
   const [mode, setMode] = useState("normal"); // "normal" practice or "mistakes" practice
   const [sessionLen, setSessionLen] = useState(SESSION_LENGTH);
   const [mistakeRules, setMistakeRules] = useState([]);
+  const [game, setGame] = useState({ i: 0, picks: [] }); // time-word game: current word + answers so far
   const [level, setLevel] = useState(1);
   const [q, setQ] = useState(null);
   const [input, setInput] = useState("");
@@ -357,6 +372,19 @@ export default function Tutor() {
     const lvl = profile.level || 1;
     setLevel(lvl);
     loadQuestion(lvl, null, { fresh: true });
+  }
+
+  // Time-word game: 10 words, instant ✓/✗, score and best score saved; results logged (LO1 assessment).
+  function startGame() { setGame({ i: 0, picks: [] }); setScreen("game"); }
+  function answerGame(choice) {
+    const [word, rule] = GAME_WORDS[game.i];
+    const picks = [...game.picks, { word, choice, ok: choice === rule }];
+    setGame({ ...game, picks });
+    if (picks.length === GAME_WORDS.length) {
+      const score = picks.filter((p) => p.ok).length;
+      setProfile((p) => ({ ...p, bestGame: Math.max(p.bestGame ?? 0, score) }));
+      setEvents((e) => [...e, { type: "game", score, picks, t: Date.now() }]);
+    }
   }
 
   // "Practise my mistakes": a short session (up to 5 items) on the rules (past / perfect) the learner got wrong,
@@ -543,7 +571,7 @@ export default function Tutor() {
     const startLabel = demo ? "Start practice (demo)" : firstTime ? "Start practice" : `Continue practice · Level ${profile.level || 1}`;
     const cards = [
       ["📘", "Learn the 2 ideas", "Finished time vs connected to now", () => setScreen("learn")],
-      ["🎯", "Time-word game", profile.bestGame != null ? `Best score: ${profile.bestGame}/10` : "Sort 10 time words", () => setScreen("game")],
+      ["🎯", "Time-word game", profile.bestGame != null ? `Best score: ${profile.bestGame}/10` : "Sort 10 time words", startGame],
       ["📒", `Practise my mistakes (${mistakes})`, mistakes ? "Your notebook of mix-ups" : "No mistakes yet", () => setScreen("mistakes")],
     ];
     return (
@@ -573,12 +601,57 @@ export default function Tutor() {
     );
   }
 
-  if (screen === "game") return (
-    <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about}>
-      <h2 className="text-2xl font-bold">Time-word game</h2>
-      <p className="mt-2">Coming in the next step.</p>
-    </Shell>
-  );
+  if (screen === "game") {
+    const done = game.picks.length === GAME_WORDS.length;
+    const shown = game.picks.length > game.i; // answered the current word, showing ✓/✗
+    if (done) {
+      const score = game.picks.filter((p) => p.ok).length;
+      return (
+        <Shell prog={prog} screenKey="game-end" tab="home" onTab={goTab} onAbout={about} step="Time-word game">
+          <h2 className="text-2xl font-bold text-center">Game over!</h2>
+          <ScoreCircle correct={score} total={GAME_WORDS.length} />
+          <p className="text-center text-lg">Best score: <b>{profile.bestGame ?? score}/10</b></p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {game.picks.map((p) => (
+              <span key={p.word} className={`rounded-full px-3 py-1 text-sm font-semibold ${p.ok ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
+                {p.ok ? "✓" : "✗"} {p.word}
+              </span>
+            ))}
+          </div>
+          <Actions>
+            <Big onClick={startGame}>Play again</Big>
+            <Big kind="secondary" onClick={() => setScreen("home")}>Back to Home</Big>
+          </Actions>
+        </Shell>
+      );
+    }
+    const [word, rule, reason] = GAME_WORDS[game.i];
+    const pick = game.picks[game.i];
+    return (
+      <Shell prog={prog} screenKey={`game-${game.i}`} onExit={() => setScreen("home")} onAbout={about}
+        step={`Word ${game.i + 1}/${GAME_WORDS.length}`}>
+        <div className="flex-1 flex flex-col justify-center items-center text-center">
+          <p className="text-base text-slate-600">Is this time finished, or connected to now?</p>
+          <p className={`mt-3 inline-block rounded-2xl px-5 py-3 text-3xl font-bold ${shown ? (rule === "past" ? "bg-amber-200 text-amber-950" : "bg-indigo-100 text-indigo-900") : "bg-white border-2 border-slate-300"}`}>{word}</p>
+          {shown && (
+            <p className={`mt-4 text-lg font-semibold ${pick.ok ? "text-green-800" : "text-orange-900"}`}>
+              {pick.ok ? "✓ Sahi! " : "✗ Not quite. "}<span className="font-normal text-slate-800">{reason}</span>
+            </p>
+          )}
+        </div>
+        <Actions>
+          {shown
+            ? <Big onClick={() => setGame((g) => ({ ...g, i: g.i + 1 }))}>{game.i + 1 < GAME_WORDS.length ? "Next word" : "See my score"}</Big>
+            : (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => answerGame("past")} className="min-h-[88px] rounded-xl bg-amber-200 text-amber-950 border-2 border-amber-500 text-lg font-bold active:bg-amber-300">Kal<br /><span className="text-base font-semibold">(finished)</span></button>
+                <button onClick={() => answerGame("perfect")} className="min-h-[88px] rounded-xl bg-indigo-100 text-indigo-900 border-2 border-indigo-500 text-lg font-bold active:bg-indigo-200">Abhi tak<br /><span className="text-base font-semibold">(connected to now)</span></button>
+              </div>
+            )}
+        </Actions>
+      </Shell>
+    );
+  }
 
   if (screen === "learn") return (
     <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} onAbout={about} step="Learn">

@@ -570,6 +570,7 @@ export default function Tutor() {
         <li>first mix-up (M1/M2/M3) or another error → timeline explanation + a similar question</li>
         <li>the same mix-up twice → mini-lesson on time words, then one level easier</li>
       </ul>
+      <p className="mb-2"><b>Sections:</b> Home (continue at your level, today’s stats) · Learn (2 ideas + Hindi vs English) · Practice · Mistakes (notebook + “Practise my mistakes”) · Me (progress and settings: Hindi by default, left-handed mode, text size, reset). The time-word game is on Home.</p>
       <p className="mb-2"><b>AI:</b> Claude generates new questions and checks your “explain why” answers. Every AI question is checked by rules before you see it. If the AI is slow or fails, an “Offline question” from the teacher-written bank is shown instead.</p>
       <p className="mb-2"><b>Demo mode:</b> open the app with <code>?demo=1</code> (et617-24b3003.vercel.app/?demo=1) for a reproducible walkthrough: fixed teacher-written questions in a set order, no AI calls, and a separate log.</p>
       {demo && <p className="mb-2 text-sm text-slate-500">Demo mode · seed questions</p>}

@@ -111,14 +111,52 @@ The hint names the time word without giving the answer ("Look at 'yesterday'. Is
   positioning), the viewport resizes when the keyboard opens (`interactive-widget=resizes-content`), and Enter submits.
 - **Tap only:** no hover-only interactions; buttons have visible pressed (`active:`) states.
 
-## Screens / states (≥ 5)
-1. Welcome + diagnostic (2 quick items) → 2. Concept cards → 3. Practice (MCQ / fill / fix / explain)
-→ 4. Feedback (correct / M1 / M2) → 5. Timeline re-explanation or prerequisite mini-lesson → 6. Progress summary
-→ About (ID 24B3003, card, AI disclosure). Footer with "24B3003" on every screen.
+## Screen map
+The app has 5 sections in a bottom tab bar (thumb zone): **Home 🏠 · Learn 📘 · Practice ✏️ · Mistakes 📒 · Me 👤**.
+The tab bar is hidden inside the practice loop (question, feedback, timeline, mini-lesson), where a header
+"✕ Exit" button leads back to Home, and it is shown again on the summary. The footer with "ET 617 · ID 24B3003 · About"
+is visible on every screen.
+
+```
+Home ─┬─ ▶ Start / Continue practice (saved level) ──► Practice loop
+      ├─ Learn the 2 ideas ──► Learn
+      ├─ Time-word game ──► Game (10 words) ──► Game score (best saved)
+      └─ Practise my mistakes (N) ──► Mistakes
+
+Learn ──► 1. Finished time → simple past · 2. Connected to now → present perfect · 3. Hindi vs English
+          (each: timeline + explanation + Hindi bridge)
+
+Practice loop (first session: idea cards 1–2 first)
+  Question (MCQ / fill / fix / explain, 💡 hint) ──► Feedback (status, your answer vs correct, rule line,
+  decision line, Hindi toggle) ──► harder / same level / timeline + similar item / time-word mini-lesson
+  ──► … ──► Summary (score circle, per-rule bars, mix-up tags)
+
+Mistakes ──► notebook (sentence, your answer struck through, correct answer, mix-up tag)
+         ──► Practise my mistakes (≤ 5 items on the same rules: seed items first, then AI items) ──► Summary
+
+Me ──► progress (accuracy per rule, level, sessions, best game, M1/M2/M3 counts)
+    ──► settings (Hindi by default, left-handed mode, text size, reset with confirmation) ──► About
+```
+
+## New features (app sections)
+- **Home:** "Namaste Ravi!", one big button that resumes practice at the saved level, today's stats (done,
+  correct, level) and cards for Learn, the game and mistakes.
+- **Learn → "Hindi vs English":** the two Hindi patterns behind M1 and M2, side by side with correct and wrong English
+  (*kal gaya hoon → I went yesterday, not I have gone yesterday*; *2020 se reh raha hoon → I have lived here since
+  2020, not I am living here since 2020*). This targets L8 (transfer from the home language) directly.
+- **Mistake notebook:** every M1/M2/M3/other answer from the log; "Practise my mistakes" starts a short session on
+  the same rules (retrieval practice of exactly the learner's weak spots).
+- **Time-word game (LO1 assessment):** 10 time words, two big buttons "Kal (finished)" / "Abhi tak (connected to now)",
+  instant ✓/✗ with a one-line reason, score and saved best score; each game is logged with every pick.
+- **Me → settings:** Hindi explanations by default; **left-handed mode** (the answer area and the hint button move
+  to the left, so C3 one-handed use works for either hand); Normal/Large text for the question and feedback;
+  reset progress with an on-screen confirmation. Settings are saved in the profile and each change is logged.
 
 ## Evaluation plan (outline)
 - Pre-test vs post-test (5 items each, the same rules, different sentences); success = ≥ 60% of learners reach ≥ 4/5.
-- Logged events: answer, classification, time per item, hints used, adaptive branch taken.
+- LO1: the time-word game score (logged per game, with every pick); success = ≥ 8/10.
+- Logged events: answer, classification, time per item, hints used, adaptive branch taken, language and setting
+  changes, game results.
 - Rubric for explanations: 0 = no reason, 1 = names the tense, 2 = refers to the time marker / "connected to now".
 
 ## Stack

@@ -84,16 +84,31 @@ export default function Tutor() {
   const [prevScreen, setPrevScreen] = useState("welcome");
   const [sorted, setSorted] = useState({}); // prerequisite mini-lesson answers
 
-  // Restore saved history (progress survives a page reload).
+  // Learner profile: language preference (home language Hindi vs school medium English) + a log of changes.
+  const [hindi, setHindi] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // Restore saved history and profile (they survive a page reload).
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem(STORE) || "null");
       if (s?.history) setHistory(s.history);
+      if (s?.profile?.hindi) setHindi(true);
+      if (s?.events) setEvents(s.events);
     } catch {}
+    setLoaded(true);
   }, []);
   useEffect(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ history })); } catch {}
-  }, [history]);
+    if (!loaded) return; // don't overwrite saved data before it is restored
+    try { localStorage.setItem(STORE, JSON.stringify({ history, profile: { hindi }, events })); } catch {}
+  }, [history, hindi, events, loaded]);
+
+  function toggleHindi() {
+    const value = !hindi;
+    setHindi(value);
+    setEvents((e) => [...e, { type: "language", value: value ? "hi" : "en", qid: q?.id, t: Date.now() }]);
+  }
 
   const session = history.filter((h) => h.session === "current");
   const used = session.map((h) => h.qid);
@@ -150,15 +165,15 @@ export default function Tutor() {
         const out = await res.json();
         verdict = out.verdict; feedback = out.feedback; source = out.source;
       } catch {
-        verdict = "other"; feedback = FEEDBACK.other(q); source = "offline";
+        verdict = "other"; feedback = FEEDBACK.other.en(q); source = "offline";
       }
       setLoading(false);
     } else {
       verdict = classify(q, answer);
-      feedback = FEEDBACK[verdict](q);
+      feedback = FEEDBACK[verdict].en(q);
     }
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
-      response: answer, verdict, t: Date.now() };
+      response: answer, verdict, lang: hindi ? "hi" : "en", t: Date.now() };
     const newSession = [...session, entry];
     const action = decide(verdict, newSession);
     entry.action = action;
@@ -269,10 +284,21 @@ export default function Tutor() {
         <div className={`rounded-xl p-4 border-2 ${good ? "bg-green-50 border-green-600" : "bg-orange-50 border-orange-500"}`}>
           <p className="text-xl font-bold">{good ? "✓ " : "↺ "}{tag}</p>
           <p className="mt-2 text-sm text-slate-700">Your answer: “{last?.response}”</p>
-          <p className="mt-3 text-lg">{result.feedback}</p>
-          {result.source !== "rule" && <p className="mt-2 text-xs text-slate-600">{result.source === "ai" ? "Feedback by AI tutor" : "Offline feedback (AI unavailable)"}</p>}
+          <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>{hindi ? FEEDBACK[result.verdict].hi(q) : result.feedback}</p>
+          {hindi
+            ? <p className="mt-2 text-xs text-slate-600">Hindi explanation (teacher-written)</p>
+            : result.source !== "rule" && <p className="mt-2 text-xs text-slate-600">{result.source === "ai" ? "Feedback by AI tutor" : "Offline feedback (AI unavailable)"}</p>}
         </div>
-        <Actions><Big onClick={next}>{session.length >= SESSION_LENGTH ? "See my progress" : nextText}</Big></Actions>
+        <Actions>
+          <button role="switch" aria-checked={hindi} onClick={toggleHindi}
+            className="w-full min-h-[52px] rounded-xl border-2 border-amber-400 bg-white px-4 flex items-center justify-between text-lg font-semibold">
+            <span>🗣 Hindi mein samjhao</span>
+            <span className={`w-12 h-7 rounded-full p-1 transition ${hindi ? "bg-green-600" : "bg-slate-300"}`}>
+              <span className={`block w-5 h-5 rounded-full bg-white transition ${hindi ? "translate-x-5" : ""}`} />
+            </span>
+          </button>
+          <Big onClick={next}>{session.length >= SESSION_LENGTH ? "See my progress" : nextText}</Big>
+        </Actions>
       </Shell>
     );
   }

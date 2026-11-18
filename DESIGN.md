@@ -73,14 +73,19 @@ one hand.
 - M2 detected: "*Since 2020* connects the past to NOW. Use *have lived*, not *am living*."
 
 ## Adaptive decision rule (design challenge)
-After each answer the tutor classifies the response as `correct`, `M1`, `M2` or `other-error`:
-- **correct (and the explanation, if asked, mentions the time marker)** → **harder question** (difficulty +1:
-  mixed markers, two-clause sentences, *ever* vs *yesterday* in one item).
-- **other-error, or the first occurrence of M1/M2** → **alternative explanation** (the timeline view for that
-  specific rule) + a similar item at the same difficulty.
-- **the same misconception twice in the session** → **prerequisite instruction**: a mini-lesson on time-marker
-  words (sort *yesterday / since / last year / already* into "Finished" vs "Connected to now"), then back to practice
-  at difficulty −1.
+After each answer the tutor classifies the response as `correct`, `M1`, `M2`, `M3` or `other`
+(M3 = simple past "did" with ever/already/just), and also records **interaction data**: whether the 💡 Hint was used
+and the time taken (`SLOW_MS` = 45 s in `lib/engine.js`). The decision rule:
+- **correct, no hint, ≤ 45 s** → **harder question** (level +1).
+- **correct but hint used or > 45 s** → **same level, new question** (the answer is right but not yet secure).
+- **first M1/M2/M3, or another error** → **alternative explanation** (the timeline view for that rule) + a similar
+  item at the same level.
+- **the same misconception twice in the session** → **prerequisite instruction**: a mini-lesson on time-marker words
+  (sort *yesterday / since 2020 / last year / already / two days ago / ever* into "Finished" vs "Connected to now"),
+  then back to practice at level −1.
+
+The hint names the time word without giving the answer ("Look at 'yesterday'. Is that time finished?" / "Look at
+'since 2020'. Does it reach NOW?"), in Hindi when the Hindi toggle is on.
 
 ## AI use (Claude, via a Next.js API route)
 1. **Question generation:** given the topic, the target rule, the difficulty and the last misconception, Claude returns

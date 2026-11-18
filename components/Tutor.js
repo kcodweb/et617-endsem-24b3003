@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BANK, byId } from "@/lib/bank";
-import { classifyDetail, decide, nextLevel, FEEDBACK } from "@/lib/engine";
+import { classifyDetail, decide, nextLevel, FEEDBACK, HINT } from "@/lib/engine";
 import { ruleCheck, explainFeedback } from "@/lib/rules";
 
 const ROLL = "24B3003";
@@ -96,6 +96,14 @@ export default function Tutor() {
   const [loading, setLoading] = useState(false);
   const [prevScreen, setPrevScreen] = useState("welcome");
   const [sorted, setSorted] = useState({}); // prerequisite mini-lesson answers
+  // Interaction data for adaptivity: was the hint used, and when was the question shown?
+  const [hintUsed, setHintUsed] = useState(false);
+  const [shownAt, setShownAt] = useState(0);
+
+  // Start the clock and reset the hint each time a new question appears on screen.
+  useEffect(() => {
+    if (screen === "practice" && q && !loading) { setShownAt(Date.now()); setHintUsed(false); }
+  }, [q, screen, loading]);
 
   // Learner profile: language preference (home language Hindi vs school medium English) + a log of changes.
   const [hindi, setHindi] = useState(false);
@@ -175,7 +183,14 @@ export default function Tutor() {
     setLoading(false);
   }
 
+  function showHint() {
+    if (hintUsed) return;
+    setHintUsed(true);
+    setEvents((e) => [...e, { type: "hint", qid: q.id, t: Date.now() }]);
+  }
+
   async function check(answer) {
+    const timeTakenMs = Date.now() - shownAt; // measured at submit, before any AI call
     let verdict, feedback, source = "rule";
     let fq = q; // the item as used for feedback (with the time word of the part the learner got wrong)
     if (q.format === "explain" && demo) {
@@ -202,9 +217,9 @@ export default function Tutor() {
       feedback = FEEDBACK[verdict].en(fq);
     }
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
-      response: answer, verdict, lang: hindi ? "hi" : "en", t: Date.now() };
+      response: answer, verdict, lang: hindi ? "hi" : "en", hintUsed, timeTakenMs, t: Date.now() };
     const newSession = [...session, entry];
-    const action = decide(verdict, newSession);
+    const action = decide(verdict, newSession, { hintUsed, timeTakenMs });
     entry.action = action;
     setHistory((h) => [...h, entry]);
     setResult({ verdict, feedback, action, source, fq });
@@ -230,7 +245,13 @@ export default function Tutor() {
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
       <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
       <p className="mb-2">Explanations in Hindi because it is Ravi's home language; the questions are in English, his school medium.</p>
-      <p className="mb-2"><b>How it adapts:</b> correct → harder question; first mistake → timeline explanation; the same misconception twice → mini-lesson on time words, then an easier level.</p>
+      <p className="mb-2"><b>How it adapts:</b></p>
+      <ul className="mb-2 list-disc pl-5 text-base">
+        <li>correct, no hint, within 45 s → harder question (level +1)</li>
+        <li>correct but hint used or more than 45 s → one more at the same level</li>
+        <li>first mix-up (M1/M2/M3) or another error → timeline explanation + a similar question</li>
+        <li>the same mix-up twice → mini-lesson on time words, then one level easier</li>
+      </ul>
       <p className="mb-2"><b>AI:</b> Claude generates new questions and checks your “explain why” answers. Every AI question is checked by rules before you see it. If the AI is slow or fails, an “Offline question” from the teacher-written bank is shown instead.</p>
       <p className="mb-2"><b>Demo mode:</b> open the app with <code>?demo=1</code> (et617-24b3003.vercel.app/?demo=1) for a reproducible walkthrough: fixed teacher-written questions in a set order, no AI calls, and a separate log.</p>
       {demo && <p className="mb-2 text-sm text-slate-500">Demo mode · seed questions</p>}
@@ -288,7 +309,13 @@ export default function Tutor() {
         {demo && <p className="text-xs text-slate-500">Demo mode · seed questions</p>}
         <p className="text-xs text-slate-600 mb-2">{q.source === "ai" ? "AI-generated question" : q.source === "offline" ? "Offline question (AI unavailable)" : "Teacher-written question"}</p>
         <p className="text-2xl font-medium leading-snug">{q.prompt}</p>
+        {hintUsed && (
+          <p className="mt-3 p-3 rounded-lg bg-yellow-50 border border-yellow-400 text-lg" lang={hindi ? "hi-Latn" : "en"}>
+            💡 {hindi ? HINT.hi(q) : HINT.en(q)}
+          </p>
+        )}
         <Actions>
+          <Big kind="secondary" onClick={showHint} disabled={hintUsed}>{hintUsed ? "💡 Hint shown" : "💡 Hint"}</Big>
           {q.format === "mcq" ? (
             q.options.map((o) => <Big key={o} kind="option" onClick={() => check(o)}>{o}</Big>)
           ) : (
@@ -312,7 +339,7 @@ export default function Tutor() {
 
   if (screen === "feedback") {
     const good = result.verdict === "correct";
-    const nextText = { harder: "Next: a harder question ⬆", alternative: "Next: see it on a timeline", prerequisite: "Next: a short lesson on time words" }[result.action];
+    const nextText = { harder: "Next: a harder question ⬆", same: "Next: one more at this level", alternative: "Next: see it on a timeline", prerequisite: "Next: a short lesson on time words" }[result.action];
     const tag = { correct: "Correct", M1: "Common mix-up: “have + V3” with a finished time", M2: "Common mix-up: “am …ing” with since/for", M3: "Common mix-up: “did” with ever/already/just", other: "Not quite" }[result.verdict];
     return (
       <Shell onAbout={about} step={step}>

@@ -132,7 +132,7 @@ function Big({ children, onClick, kind = "primary", disabled, id }) {
   );
 }
 
-function Timeline({ rule }) {
+function Timeline({ rule, marker }) { // marker: the question's time word (defaults for the idea cards)
   // Finished box (simple past) vs line reaching NOW (present perfect).
   return (
     <svg viewBox="0 0 320 90" className="w-full my-3" role="img"
@@ -144,13 +144,13 @@ function Timeline({ rule }) {
         <>
           <rect x="60" y="28" width="110" height="44" rx="6" fill="#fde68a" stroke="#b45309" />
           <circle cx="115" cy="50" r="7" fill="#b45309" />
-          <text x="62" y="20" fontSize="13" fill="#92400e">finished time (yesterday)</text>
+          <text x="160" y="20" textAnchor="middle" fontSize="13" fill="#92400e">finished time ({marker || "yesterday"})</text>
         </>
       ) : (
         <>
           <line x1="80" y1="50" x2="288" y2="50" stroke="#4338ca" strokeWidth="8" strokeLinecap="round" />
           <circle cx="80" cy="50" r="7" fill="#4338ca" />
-          <text x="70" y="20" fontSize="13" fill="#3730a3">since 2020 → still true now</text>
+          <text x="160" y="20" textAnchor="middle" fontSize="13" fill="#3730a3">{marker || "since 2020"} → still true now</text>
         </>
       )}
     </svg>
@@ -823,7 +823,7 @@ export default function Tutor() {
     return (
       <Shell prog={prog} screenKey={screenKey} tab={tab} onTab={goTab} onExit={() => setScreen("home")} settings={profile} onAbout={about} step="Another way to see it">
         <h2 className="text-xl font-bold" lang={hindi ? "hi-Latn" : "en"}>{TL[rule].heading}</h2>
-        <Timeline rule={rule} />
+        <Timeline rule={rule} marker={fq?.marker} />
         <p className="text-base" lang={hindi ? "hi-Latn" : "en"}>{TL[rule].text}</p>
         <div className="mt-3 p-3 rounded-xl bg-white border border-slate-200">
           <p className="text-sm text-slate-600">{TL.correctSentence}</p>

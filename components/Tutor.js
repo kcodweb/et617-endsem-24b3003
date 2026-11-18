@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BANK, byId } from "@/lib/bank";
-import { classify, decide, nextLevel, FEEDBACK } from "@/lib/engine";
+import { classifyDetail, decide, nextLevel, FEEDBACK } from "@/lib/engine";
 
 const ROLL = "24B3003";
 const SESSION_LENGTH = 8;
@@ -133,7 +133,7 @@ export default function Tutor() {
       const ex = BANK.find((b) => b.format === "explain" && !used.includes(b.id));
       if (ex) { setQ(ex); setScreen("practice"); return; }
     }
-    const rule = lastVerdict === "M1" ? "past" : lastVerdict === "M2" ? "perfect" : n % 2 ? "perfect" : "past";
+    const rule = lastVerdict === "M1" ? "past" : lastVerdict === "M2" || lastVerdict === "M3" ? "perfect" : n % 2 ? "perfect" : "past";
     setLoading(true);
     setScreen("practice");
     try {
@@ -141,7 +141,7 @@ export default function Tutor() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          level: lvl, rule, lastMisconception: lastVerdict === "M1" || lastVerdict === "M2" ? lastVerdict : null,
+          level: lvl, rule, lastMisconception: ["M1", "M2", "M3"].includes(lastVerdict) ? lastVerdict : null,
           usedIds: used, recent: session.map((h) => h.prompt),
         }),
       });
@@ -154,6 +154,7 @@ export default function Tutor() {
 
   async function check(answer) {
     let verdict, feedback, source = "rule";
+    let fq = q; // the item as used for feedback (with the time word of the part the learner got wrong)
     if (q.format === "explain") {
       setLoading(true);
       try {
@@ -169,8 +170,10 @@ export default function Tutor() {
       }
       setLoading(false);
     } else {
-      verdict = classify(q, answer);
-      feedback = FEEDBACK[verdict].en(q);
+      const d = classifyDetail(q, answer);
+      verdict = d.verdict;
+      fq = { ...q, marker: d.marker };
+      feedback = FEEDBACK[verdict].en(fq);
     }
     const entry = { session: "current", qid: q.id, prompt: q.prompt, rule: q.rule, level, format: q.format,
       response: answer, verdict, lang: hindi ? "hi" : "en", t: Date.now() };
@@ -178,7 +181,7 @@ export default function Tutor() {
     const action = decide(verdict, newSession);
     entry.action = action;
     setHistory((h) => [...h, entry]);
-    setResult({ verdict, feedback, action, source });
+    setResult({ verdict, feedback, action, source, fq });
     setScreen("feedback");
   }
 
@@ -278,13 +281,13 @@ export default function Tutor() {
   if (screen === "feedback") {
     const good = result.verdict === "correct";
     const nextText = { harder: "Next: a harder question ⬆", alternative: "Next: see it on a timeline", prerequisite: "Next: a short lesson on time words" }[result.action];
-    const tag = { correct: "Correct", M1: "Common mix-up: “have + V3” with a finished time", M2: "Common mix-up: “am …ing” with since/for", other: "Not quite" }[result.verdict];
+    const tag = { correct: "Correct", M1: "Common mix-up: “have + V3” with a finished time", M2: "Common mix-up: “am …ing” with since/for", M3: "Common mix-up: “did” with ever/already/just", other: "Not quite" }[result.verdict];
     return (
       <Shell onAbout={about} step={step}>
         <div className={`rounded-xl p-4 border-2 ${good ? "bg-green-50 border-green-600" : "bg-orange-50 border-orange-500"}`}>
           <p className="text-xl font-bold">{good ? "✓ " : "↺ "}{tag}</p>
           <p className="mt-2 text-sm text-slate-700">Your answer: “{last?.response}”</p>
-          <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>{hindi ? FEEDBACK[result.verdict].hi(q) : result.feedback}</p>
+          <p className="mt-3 text-lg" lang={hindi ? "hi-Latn" : "en"}>{hindi ? FEEDBACK[result.verdict].hi(result.fq) : result.feedback}</p>
           {hindi
             ? <p className="mt-2 text-xs text-slate-600">Hindi explanation (teacher-written)</p>
             : result.source !== "rule" && <p className="mt-2 text-xs text-slate-600">{result.source === "ai" ? "Feedback by AI tutor" : "Offline feedback (AI unavailable)"}</p>}
@@ -357,6 +360,7 @@ export default function Tutor() {
     const correct = session.filter((h) => h.verdict === "correct").length;
     const m1 = session.filter((h) => h.verdict === "M1").length;
     const m2 = session.filter((h) => h.verdict === "M2").length;
+    const m3 = session.filter((h) => h.verdict === "M3").length;
     const pct = (rule) => {
       const s = session.filter((h) => h.rule === rule);
       return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
@@ -374,7 +378,8 @@ export default function Tutor() {
         <p className="mt-4 text-base">
           {m1 > 0 && <>You used “have + V3” with a finished time {m1}×. </>}
           {m2 > 0 && <>You used “am …ing” with since/for {m2}×. </>}
-          {m1 + m2 === 0 && <>No common mix-ups this time — great!</>}
+          {m3 > 0 && <>You used “did” with ever/already/just {m3}×. </>}
+          {m1 + m2 + m3 === 0 && <>No common mix-ups this time — great!</>}
         </p>
         <Actions><Big onClick={start}>Practise again</Big></Actions>
       </Shell>

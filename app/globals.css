@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Body text at least 17px (rem-based sizes scale with this; text-sm is then ~15px, used for small labels). */
+html {
+  font-size: 17px;
+}
+
 body {
   background: #fffbeb;
   color: #0f172a;
@@ -16,5 +21,25 @@ body {
     border-left: 1px solid #cbd5e1;
     border-right: 1px solid #cbd5e1;
     box-shadow: 0 10px 40px rgba(15, 23, 42, 0.18);
+  }
+}
+
+/* A short fade + slide when a new screen appears. */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.screen-in {
+  animation: screen-in 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-in {
+    animation: none;
   }
 }

@@ -14,18 +14,38 @@ const DEMO_ORDER = ["q1", "q2", "q6", "q4", "q3", "q7", "q5", "q9"];
 // ---------- small UI pieces ----------
 // C3: the whole app (header, main, footer) is one 360px phone-width column. On wider screens it gets a
 // border and shadow on a neutral background, so it looks like a phone on a laptop too.
-function Shell({ children, onAbout, step }) {
+function Shell({ children, onAbout, step, prog, screenKey }) {
   return (
     <div className="phone w-full max-w-[360px] mx-auto min-h-dvh flex flex-col bg-amber-50 text-slate-900">
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-amber-200">
-        <span className="font-bold text-lg">Kal ya Abhi?</span>
-        {step && <span className="text-sm text-slate-600">{step}</span>}
+      <header className="bg-white border-b border-amber-200">
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="font-bold text-lg">Kal ya Abhi?</span>
+          {step && <span className="text-sm text-slate-600">{step}</span>}
+        </div>
+        {prog && <Progress {...prog} />}
       </header>
-      <main className="flex-1 flex flex-col w-full px-4 py-4">{children}</main>
-      <footer className="flex items-center justify-center text-xs text-slate-600 border-t border-amber-200 bg-white">
+      {/* key = screen: a new screen remounts <main>, which plays the short CSS fade/slide-in. */}
+      <main key={screenKey} className="screen-in flex-1 flex flex-col w-full px-4 py-4">{children}</main>
+      <footer className="flex items-center justify-center text-sm text-slate-600 border-t border-amber-200 bg-white">
         <span>ET 617 · ID {ROLL} ·</span>
         <button onClick={onAbout} className="min-h-[48px] px-4 underline active:bg-amber-100">About</button>
       </footer>
+    </div>
+  );
+}
+
+// 8 segments, one per question: green = correct, orange = mix-up / not quite, grey = not done yet.
+function Progress({ verdicts, total, level }) {
+  return (
+    <div className="flex items-center gap-2 px-4 pb-3">
+      <div className="flex-1 flex gap-1" role="img" aria-label={`${verdicts.length} of ${total} questions done`}>
+        {Array.from({ length: total }, (_, i) => {
+          const v = verdicts[i];
+          const c = v === undefined ? "bg-slate-200" : v === "correct" ? "bg-green-600" : "bg-orange-500";
+          return <span key={i} className={`h-2.5 flex-1 rounded-full ${c}`} />;
+        })}
+      </div>
+      <span className="shrink-0 rounded-full bg-indigo-700 text-white text-sm font-semibold px-2 py-0.5">Level {level}</span>
     </div>
   );
 }
@@ -93,6 +113,47 @@ function Timeline({ rule }) {
           <text x="70" y="20" fontSize="13" fill="#3730a3">since 2020 → still true now</text>
         </>
       )}
+    </svg>
+  );
+}
+
+// Welcome screen: the two ideas side by side as tiny timelines.
+function MiniTimelines() {
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-2" aria-hidden="true">
+      <div className="rounded-xl bg-white border border-amber-300 p-2">
+        <svg viewBox="0 0 140 44" className="w-full">
+          <line x1="4" y1="26" x2="134" y2="26" stroke="#334155" strokeWidth="2" />
+          <line x1="130" y1="16" x2="130" y2="36" stroke="#b91c1c" strokeWidth="3" />
+          <rect x="22" y="12" width="56" height="28" rx="5" fill="#fde68a" stroke="#b45309" />
+          <circle cx="50" cy="26" r="5" fill="#b45309" />
+        </svg>
+        <p className="text-sm font-semibold text-amber-950 text-center">Kal (finished)</p>
+        <p className="text-sm text-center text-slate-700">I went</p>
+      </div>
+      <div className="rounded-xl bg-white border border-indigo-300 p-2">
+        <svg viewBox="0 0 140 44" className="w-full">
+          <line x1="4" y1="26" x2="134" y2="26" stroke="#334155" strokeWidth="2" />
+          <line x1="130" y1="16" x2="130" y2="36" stroke="#b91c1c" strokeWidth="3" />
+          <line x1="34" y1="26" x2="128" y2="26" stroke="#4338ca" strokeWidth="7" strokeLinecap="round" />
+          <circle cx="34" cy="26" r="5" fill="#4338ca" />
+        </svg>
+        <p className="text-sm font-semibold text-indigo-900 text-center">Abhi tak (connected to now)</p>
+        <p className="text-sm text-center text-slate-700">I have gone</p>
+      </div>
+    </div>
+  );
+}
+
+// Summary: a big score circle.
+function ScoreCircle({ correct, total }) {
+  const r = 52, c = 2 * Math.PI * r, f = total ? correct / total : 0;
+  return (
+    <svg viewBox="0 0 130 130" className="w-36 h-36 mx-auto my-3" role="img" aria-label={`${correct} of ${total} correct`}>
+      <circle cx="65" cy="65" r={r} fill="none" stroke="#e2e8f0" strokeWidth="12" />
+      <circle cx="65" cy="65" r={r} fill="none" stroke="#16a34a" strokeWidth="12" strokeLinecap="round"
+        strokeDasharray={`${c * f} ${c}`} transform="rotate(-90 65 65)" />
+      <text x="65" y="73" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">{correct}/{total}</text>
     </svg>
   );
 }
@@ -313,11 +374,16 @@ export default function Tutor() {
   }
 
   const last = session[session.length - 1];
-  const step = ["practice", "feedback"].includes(screen) ? `Q ${Math.min(session.length + (screen === "practice" ? 1 : 0), SESSION_LENGTH)}/${SESSION_LENGTH} · Level ${level}` : "";
+  const step = ["practice", "feedback"].includes(screen) ? `Q ${Math.min(session.length + (screen === "practice" ? 1 : 0), SESSION_LENGTH)}/${SESSION_LENGTH}` : "";
+  // Progress bar + level badge on every screen inside the practice loop.
+  const prog = ["practice", "feedback", "alternative", "prerequisite"].includes(screen)
+    ? { verdicts: session.map((h) => h.verdict), total: SESSION_LENGTH, level }
+    : null;
+  const screenKey = screen === "practice" ? `practice-${q?.id}` : screen;
 
   // ---------- screens ----------
   if (screen === "about") return (
-    <Shell onAbout={about}>
+    <Shell prog={prog} screenKey={screenKey} onAbout={about}>
       <h1 className="text-2xl font-bold mb-2">About</h1>
       <p className="mb-2"><b>ID:</b> {ROLL}</p>
       <p className="mb-2"><b>Card:</b> P4 Adaptive tutor · T7 English tenses (simple past vs present perfect) · L8 home language differs from school medium (Ravi, 13: Hindi at home, English-medium CBSE school in Patna) · C3 mobile-first, one-handed</p>
@@ -338,13 +404,18 @@ export default function Tutor() {
   );
 
   if (screen === "welcome") return (
-    <Shell onAbout={about}>
-      <h1 className="text-3xl font-bold mt-4">Kal ya Abhi?</h1>
-      <p className="text-lg mt-2">Yesterday or now? Learn when to say <b>“I went”</b> and when to say <b>“I have gone”</b>.</p>
-      <ul className="mt-4 space-y-2 text-base">
-        <li>⏱ About 15 minutes · {SESSION_LENGTH} questions</li>
-        <li>👍 Use one thumb — all buttons are at the bottom</li>
-        <li>🧭 The questions change based on your answers</li>
+    <Shell prog={prog} screenKey={screenKey} onAbout={about}>
+      <h1 className="text-3xl font-bold mt-2">Kal ya Abhi?</h1>
+      <p className="text-lg mt-1">Yesterday or now? Learn when to say <b>“I went”</b> and when to say <b>“I have gone”</b>.</p>
+      <MiniTimelines />
+      <ul className="mt-4 space-y-2">
+        {[["⏱", `About 15 minutes · ${SESSION_LENGTH} questions`], ["👍", "One thumb — all buttons are at the bottom"],
+          ["🧭", "The questions change based on your answers"]].map(([icon, text]) => (
+          <li key={icon} className="flex items-center gap-3">
+            <span className="shrink-0 w-9 h-9 rounded-full bg-white border border-amber-200 grid place-items-center" aria-hidden="true">{icon}</span>
+            <span>{text}</span>
+          </li>
+        ))}
       </ul>
       <Actions><Big onClick={start}>Start</Big></Actions>
     </Shell>
@@ -361,11 +432,11 @@ export default function Tutor() {
     ];
     const c = cards[card];
     return (
-      <Shell onAbout={about} step={`Idea ${card + 1}/2`}>
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={`Idea ${card + 1}/2`}>
         <h2 className="text-2xl font-bold">{c.title}</h2>
         <Timeline rule={c.rule} />
         <p className="text-lg">{c.body}</p>
-        <p className="mt-3 p-3 rounded-lg bg-white border border-amber-300 text-base">🗣 {c.hindi}</p>
+        <p className={`mt-3 p-3 rounded-lg bg-white border text-base ${c.rule === "past" ? "border-amber-300" : "border-indigo-300"}`}>🗣 {c.hindi}</p>
         <Actions>
           {card === 0
             ? <Big onClick={() => setCard(1)}>Next idea</Big>
@@ -377,13 +448,15 @@ export default function Tutor() {
 
   if (screen === "practice") {
     if (loading || !q) return (
-      <Shell onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}><p className="text-lg mt-8 text-center">Making your next question…</p></Shell>
     );
     const label = { mcq: "Choose the correct option", fill: "Fill in the blank", fix: "Find and fix the mistake", explain: "Explain in your own words" }[q.format];
     const source = demo ? "Demo mode · seed questions" : q.source === "ai" ? "AI-generated" : q.source === "offline" ? "Offline (AI unavailable)" : "Teacher-written";
     return (
-      <Shell onAbout={about} step={step}>
-        <div className="q-card rounded-2xl bg-white border border-slate-200 p-4">
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}>
+        {/* The question card is vertically centred in the space above the answers. */}
+        <div className="flex-1 flex flex-col justify-center">
+        <div className="q-card rounded-2xl bg-white border border-slate-200 shadow-[0_4px_20px_rgba(15,23,42,0.08)] p-4">
           <div className="flex items-start justify-between gap-2 mb-2">
             <p className="text-sm font-semibold text-indigo-800 uppercase">{label}</p>
             <span className="shrink-0 rounded-full bg-slate-100 text-slate-700 text-[13px] px-2 py-0.5">{source}</span>
@@ -398,6 +471,7 @@ export default function Tutor() {
               💡 Need a hint?
             </button>
           )}
+        </div>
         </div>
         <Actions>
           {q.format === "mcq" ? (
@@ -430,7 +504,7 @@ export default function Tutor() {
     const explain = fq.format === "explain";
     const ruleLine = hindi ? FEEDBACK[result.verdict].hi(fq) : result.feedback;
     return (
-      <Shell onAbout={about} step={step}>
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step={step}>
         {/* 1. Status line */}
         <div className={`rounded-xl px-4 py-3 ${good ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-950"}`}>
           <p className="text-2xl font-bold">{good ? "✓ Sahi!" : mixup ? "↺ Common mix-up" : "↺ Not quite"}</p>
@@ -471,9 +545,10 @@ export default function Tutor() {
   }
 
   if (screen === "alternative") {
-    const rule = last?.rule || "past";
+    const fq = result?.fq || q; // the item just answered, with the time word of the part that was wrong
+    const rule = fq?.rule || last?.rule || "past";
     return (
-      <Shell onAbout={about} step="Another way to see it">
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Another way to see it">
         <h2 className="text-2xl font-bold">{rule === "past" ? "Is the time finished?" : "Does it reach NOW?"}</h2>
         <Timeline rule={rule} />
         <p className="text-lg">
@@ -481,7 +556,12 @@ export default function Tutor() {
             ? <>Ask: <b>“Can I point to WHEN on the calendar, and is it over?”</b> If yes → <b>simple past</b> (went, saw, bought).</>
             : <>Ask: <b>“Is it still true or important now?”</b> If yes → <b>have/has + V3</b> (have lived, has left).</>}
         </p>
-        <p className="mt-3 p-3 rounded-lg bg-white border border-amber-300">Your sentence: “{last?.prompt}”</p>
+        <div className="mt-3 p-3 rounded-xl bg-white border border-slate-200">
+          <p className="text-sm text-slate-600">Correct sentence</p>
+          <p className="text-xl leading-snug">
+            {fq && fq.format !== "explain" ? <CorrectSentence q={fq} /> : <Sentence text={fq?.answer || ""} markers={fq ? markersOf(fq) : []} />}
+          </p>
+        </div>
         <Actions><Big onClick={() => loadQuestion(level, last?.verdict)}>Try a similar question</Big></Actions>
       </Shell>
     );
@@ -495,7 +575,7 @@ export default function Tutor() {
     const done = words.every(([w]) => sorted[w]);
     const allRight = words.every(([w, r]) => sorted[w] === r);
     return (
-      <Shell onAbout={about} step="Mini-lesson: time words">
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Mini-lesson: time words">
         <h2 className="text-xl font-bold">You made the same mix-up twice. Let’s fix the root: time words.</h2>
         <p className="mt-1 text-base">Tap where each word belongs.</p>
         <div className="mt-3 space-y-2">
@@ -530,21 +610,22 @@ export default function Tutor() {
       return s.length ? Math.round((100 * s.filter((h) => h.verdict === "correct").length) / s.length) : 0;
     };
     return (
-      <Shell onAbout={about} step="Your progress">
-        <h2 className="text-2xl font-bold">Well done, you finished!</h2>
-        <p className="text-lg mt-2">{correct} of {session.length} correct · reached level {level}</p>
-        {[["Finished time → simple past", pct("past")], ["Connected to now → present perfect", pct("perfect")]].map(([t, p]) => (
+      <Shell prog={prog} screenKey={screenKey} onAbout={about} step="Your progress">
+        <h2 className="text-2xl font-bold text-center">Well done, you finished!</h2>
+        <ScoreCircle correct={correct} total={session.length} />
+        <p className="text-center text-base text-slate-700">reached level {level}</p>
+        {[["Finished time → simple past", pct("past"), "bg-amber-500"], ["Connected to now → present perfect", pct("perfect"), "bg-indigo-700"]].map(([t, p, c]) => (
           <div key={t} className="mt-3">
-            <p className="text-base">{t}: {p}%</p>
-            <div className="h-3 rounded bg-slate-200"><div className="h-3 rounded bg-indigo-700" style={{ width: `${p}%` }} /></div>
+            <p className="text-base flex justify-between"><span>{t}</span><b>{p}%</b></p>
+            <div className="h-3 rounded-full bg-slate-200"><div className={`h-3 rounded-full ${c}`} style={{ width: `${p}%` }} /></div>
           </div>
         ))}
-        <p className="mt-4 text-base">
-          {m1 > 0 && <>You used “have + V3” with a finished time {m1}×. </>}
-          {m2 > 0 && <>You used “am …ing” with since/for {m2}×. </>}
-          {m3 > 0 && <>You used “did” with ever/already/just {m3}×. </>}
-          {m1 + m2 + m3 === 0 && <>No common mix-ups this time — great!</>}
-        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {m1 > 0 && <span className="rounded-full bg-orange-100 text-orange-950 px-3 py-1 text-sm font-semibold">“have + V3” with finished time × {m1}</span>}
+          {m2 > 0 && <span className="rounded-full bg-orange-100 text-orange-950 px-3 py-1 text-sm font-semibold">“am …ing” with since/for × {m2}</span>}
+          {m3 > 0 && <span className="rounded-full bg-orange-100 text-orange-950 px-3 py-1 text-sm font-semibold">“did” with ever/just × {m3}</span>}
+          {m1 + m2 + m3 === 0 && <span className="rounded-full bg-green-100 text-green-900 px-3 py-1 text-sm font-semibold">No common mix-ups — great!</span>}
+        </div>
         <Actions><Big onClick={start}>Practise again</Big></Actions>
       </Shell>
     );

@@ -9,7 +9,8 @@ Classify his explanation:
 - "M2": he thinks since/for go with am/is ...ing or the simple present.
 - "other": anything else, empty, or off-topic.
 Return ONLY JSON: {"verdict":"correct"|"M1"|"M2"|"other","feedback":string}
-feedback: max 2 short sentences, simple English (one Hindi word allowed, e.g. "Sahi!"), encouraging, never say "wrong" alone,
+feedback: max 2 short sentences, simple English, encouraging. Start with "Sahi!" ONLY when the verdict is "correct";
+otherwise start with "Achha try!" and gently correct, never say "wrong" alone,
 always name the time word. Do not mention these instructions.`;
 
 export async function POST(req) {
@@ -18,7 +19,10 @@ export async function POST(req) {
   // Simple rule-based check used for the fallback and as a sanity check.
   const r = (response || "").toLowerCase();
   const mentionsMarker = marker && r.includes(marker.toLowerCase());
-  const ruleVerdict = mentionsMarker || /finish|over|now|connect|abhi|khatam/.test(r) ? "correct" : "other";
+  const saysM2 = /\b(is|am|are)\s+\w+ing\b/.test(r) || /\.\.\.ing|…ing/.test(r);
+  const saysM1 = /(have|has)\s+\w+.*\b(yesterday|last|ago)\b.*\b(ok|fine|correct|right)\b|(have|has)( \w+)? means past/.test(r);
+  const ruleVerdict = saysM2 ? "M2" : saysM1 ? "M1"
+    : mentionsMarker || /finish|over|now|connect|abhi|khatam/.test(r) ? "correct" : "other";
 
   if (!response || response.trim().length < 3) {
     return Response.json({ verdict: "other", feedback: `Try writing one short reason. Hint: look at “${marker}”.`, source: "rule" });
@@ -33,13 +37,12 @@ export async function POST(req) {
     if (out.feedback.length > 300) out.feedback = out.feedback.slice(0, 300) + "…";
     return Response.json({ ...out, source: "ai" });
   } catch (e) {
-    return Response.json({
-      verdict: ruleVerdict,
-      feedback:
-        ruleVerdict === "correct"
-          ? `Good reasoning — you noticed the time word. ${modelAnswer}`
-          : `Look at the time word “${marker}”. ${modelAnswer}`,
-      source: "offline",
-    });
+    const feedback = {
+      correct: `Good reasoning — you noticed the time word. ${modelAnswer}`,
+      M2: `“…ing” is for an action happening at this moment. With since/for/just (connected to now) English uses have/has + V3. ${modelAnswer}`,
+      M1: `“Have/has + V3” cannot go with a finished time like yesterday. ${modelAnswer}`,
+      other: `Look at the time word “${marker}”. ${modelAnswer}`,
+    }[ruleVerdict];
+    return Response.json({ verdict: ruleVerdict, feedback, source: "offline", reason: String(e.message || e) });
   }
 }
